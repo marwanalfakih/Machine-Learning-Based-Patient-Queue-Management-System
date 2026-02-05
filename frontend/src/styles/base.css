@@ -1,0 +1,30 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text-dark);
+}
+
+button {
+  border: none;
+  cursor: pointer;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  padding: 14px 26px;
+}
+
+.btn-outline {
+  background: white;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 14px 26px;
+}
