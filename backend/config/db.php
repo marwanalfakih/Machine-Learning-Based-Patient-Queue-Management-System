@@ -1,18 +1,29 @@
 <?php
-$host = "localhost";
-$db   = "healthcare_db";
-$user = "root";
-$pass = "";
+class Database
+{
+    private $host = "localhost";
+    private $db_name = "healthcare_queue";
+    private $username = "root";
+    private $password = "";
+    public $conn;
 
-try {
-    $pdo = new PDO(
-        "mysql:host=$host;dbname=$db;charset=utf8",
-        $user,
-        $pass,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(["error" => "DB Connection failed"]);
-    exit;
+    public function getConnection()
+    {
+        $this->conn = null;
+
+        try {
+            $this->conn = new PDO(
+                "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8mb4",
+                $this->username,
+                $this->password
+            );
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        } catch (PDOException $exception) {
+            error_log("Connection error: " . $exception->getMessage());
+            die(json_encode(["error" => "Database connection failed"]));
+        }
+
+        return $this->conn;
+    }
 }
