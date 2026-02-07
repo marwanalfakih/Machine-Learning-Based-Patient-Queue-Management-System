@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import "../styles/theme.css";
+import { registerPatient } from '../services/api';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -108,42 +109,80 @@ const Register = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    // Validate terms agreement
-    if (!formData.agreeToTerms || !formData.agreeToPrivacy || !formData.agreeToMedicalData) {
-      alert('Please agree to all terms and conditions');
-      setLoading(false);
-      return;
-    }
+  // Validate terms agreement
+  if (!formData.agreeToTerms || !formData.agreeToPrivacy || !formData.agreeToMedicalData) {
+    alert('Please agree to all terms and conditions');
+    setLoading(false);
+    return;
+  }
 
-    try {
-      // Prepare registration data
-      const registrationData = {
-        ...formData,
-        role: 'patient',
-        registrationDate: new Date().toISOString(),
-        status: 'pending' // Admin approval required
-      };
+  try {
+    console.log('🔄 Starting registration process...');
+    
+    // Prepare registration data
+    const registrationData = {
+      username: `${formData.firstName}.${formData.lastName}`.toLowerCase().replace(/\s+/g, ''),
+      email: formData.email,
+      password: formData.password,
+      phone: formData.phone,
+      userType: 'patient',
+      
+      // Personal information
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      dateOfBirth: formData.dateOfBirth,
+      gender: formData.gender,
+      nationalId: formData.nationalId,
+      
+      // Address
+      address: formData.address || '',
+      city: formData.city || '',
+      state: formData.state || '',
+      zipCode: formData.zipCode || '',
+      country: formData.country || '',
+      
+      // Medical information
+      bloodType: formData.bloodType || '',
+      allergies: formData.allergies || '',
+      currentMedications: formData.currentMedications || '',
+      preExistingConditions: formData.preExistingConditions || '',
+      emergencyContactName: formData.emergencyContactName || '',
+      emergencyContactPhone: formData.emergencyContactPhone || ''
+    };
 
-      // Remove confirmPassword from data sent to backend
-      delete registrationData.confirmPassword;
+    console.log('📤 Registration data prepared:', registrationData);
 
-      // Simulate API call to register patient
+    // 🔥 استدعاء API حقيقي بدلاً من setTimeout
+    const result = await registerPatient(registrationData);
+    
+    console.log('📥 API Response:', result);
+
+    if (result.success) {
+      console.log('✅ Registration successful!');
+      
+      // عرض رسالة نجاح
+      alert('✅ Registration submitted successfully!\n\nYour account has been created and is pending admin approval.');
+      
+      // Redirect to login page
       setTimeout(() => {
-        alert('✅ Registration submitted successfully!\n\nYour account is pending admin approval. You will receive an email once approved.');
-        setLoading(false);
-        
-        // Redirect to login page
         navigate('/login');
-      }, 1500);
-
-    } catch (error) {
-      alert('Registration failed: ' + error.message);
-      setLoading(false);
+      }, 2000);
+      
+    } else {
+      console.error('❌ Registration failed:', result.error);
+      alert(`Registration failed: ${result.error || 'Unknown error. Please try again.'}`);
     }
-  };
+    
+  } catch (error) {
+    console.error('🚨 Registration error:', error);
+    alert(`Registration error: ${error.message}. Please check your connection.`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const renderStepIndicator = () => (
     <div className="registration-steps">

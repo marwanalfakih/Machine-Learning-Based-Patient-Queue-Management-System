@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import "../styles/theme.css";
 
@@ -10,39 +10,129 @@ const Login = () => {
     role: 'patient'
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [backendStatus, setBackendStatus] = useState('Unknown');
+
+  // اختبار اتصال الـ Backend عند تحميل الصفحة
+  useEffect(() => {
+    checkBackendConnection();
+  }, []);
+
+  const checkBackendConnection = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/login.php', {
+        method: 'OPTIONS'
+      });
+      setBackendStatus(response.ok ? 'Connected ✓' : 'Error');
+      console.log('Backend status:', response.status);
+    } catch (err) {
+      setBackendStatus('Not Connected ✗');
+      console.error('Backend check failed:', err);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     
+    console.log('Login attempt with:', formData.email);
+    console.log('Backend URL:', 'http://localhost:8000/api/auth/login.php');
+
     try {
-      // Simple validation
+      // التحقق من البيانات المدخلة
       if (!formData.email || !formData.password) {
-        alert('Please fill all fields');
+        setError('Please fill all fields');
         setLoading(false);
         return;
       }
       
-      // Simulate API call
-      setTimeout(() => {
-        alert(`Login successful as ${formData.role}!`);
+      // الاتصال بالـ Backend
+      const response = await fetch('http://localhost:8000/api/auth/login.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'login',
+          email: formData.email,
+          password: formData.password
+        }),
+      });
+
+      console.log('Response status:', response.status);
+      
+      // قراءة النص الخام أولاً للتصحيح
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        console.error('Raw response that failed to parse:', responseText);
         
-        // Redirect based on role
-        if (formData.role === 'patient') {
-          navigate('/patient');
-        } else if (formData.role === 'doctor') {
-          navigate('/doctor');
-        } else if (formData.role === 'admin') {
-          alert('Admin portal coming soon!');
-          navigate('/');
+        setError('Invalid JSON response from server. Backend may have PHP errors.');
+        if (responseText.includes('Fatal error') || responseText.includes('Parse error')) {
+          setError('PHP Error in backend. Check PHP configuration.');
         }
         setLoading(false);
-      }, 1000);
+        return;
+      }
+
+      console.log('Parsed response:', data);
+      
+      if (data.success) {
+        console.log('Login successful! User data:', data.user);
+        
+        // حفظ التوكن والمستخدم في localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // التوجيه بعد تأخير بسيط
+        setTimeout(() => {
+          if (data.user.userType === 'patient') {
+            navigate('/patient');
+          } else if (data.user.userType === 'doctor') {
+            navigate('/doctor');
+          } else if (data.user.userType === 'admin') {
+            navigate('/admin');
+          }
+        }, 100);
+        
+      } else {
+        console.log('Login failed:', data.error);
+        setError(data.error || 'Login failed. Check your credentials.');
+      }
       
     } catch (error) {
-      alert('Login failed: ' + error.message);
+      console.error('Network error details:', error);
+      
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        setError(`Cannot connect to backend server. Make sure:
+          1. PHP server is running (php -S localhost:8000)
+          2. Backend folder structure is correct
+          3. File exists at: backend/api/auth/login.php`);
+      } else {
+        setError(`Network error: ${error.message}`);
+      }
+    } finally {
       setLoading(false);
     }
+  };
+
+  const handleTestLogin = (email, password, role) => {
+    setFormData({
+      email: email,
+      password: password,
+      role: role
+    });
+    
+    // إرسال تلقائي بعد تعبئة البيانات
+    setTimeout(() => {
+      document.querySelector('.login-btn').click();
+    }, 500);
   };
 
   return (
@@ -51,7 +141,29 @@ const Login = () => {
         <div className="login-header">
           <h2>Login to Smart Healthcare</h2>
           <p>Access your healthcare portal</p>
+          <div style={{ 
+            fontSize: '0.9rem', 
+            color: backendStatus.includes('✓') ? '#43a047' : '#e53935',
+            marginTop: '10px',
+            padding: '5px 10px',
+            backgroundColor: backendStatus.includes('✓') ? '#e8f5e9' : '#ffebee',
+            borderRadius: '5px',
+            display: 'inline-block'
+          }}>
+            <i className={`fas fa-${backendStatus.includes('✓') ? 'check-circle' : 'exclamation-circle'}`}></i>
+            {' '}Backend: {backendStatus}
+          </div>
         </div>
+        
+        {error && (
+          <div className="alert alert-error">
+            <i className="fas fa-exclamation-circle"></i>
+            <div>
+              <strong>Error:</strong> 
+              <div style={{ whiteSpace: 'pre-line', marginTop: '5px' }}>{}</div>
+            </div>
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
@@ -62,6 +174,7 @@ const Login = () => {
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
               required
+              disabled={loading}
             />
           </div>
           
@@ -73,6 +186,7 @@ const Login = () => {
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
               required
+              disabled={loading}
             />
           </div>
           
@@ -83,6 +197,7 @@ const Login = () => {
                 type="button"
                 className={`role-btn ${formData.role === 'patient' ? 'active' : ''}`}
                 onClick={() => setFormData({...formData, role: 'patient'})}
+                disabled={loading}
               >
                 <i className="fas fa-user"></i> Patient
               </button>
@@ -90,6 +205,7 @@ const Login = () => {
                 type="button"
                 className={`role-btn ${formData.role === 'doctor' ? 'active' : ''}`}
                 onClick={() => setFormData({...formData, role: 'doctor'})}
+                disabled={loading}
               >
                 <i className="fas fa-user-md"></i> Doctor
               </button>
@@ -97,6 +213,7 @@ const Login = () => {
                 type="button"
                 className={`role-btn ${formData.role === 'admin' ? 'active' : ''}`}
                 onClick={() => setFormData({...formData, role: 'admin'})}
+                disabled={loading}
               >
                 <i className="fas fa-cog"></i> Admin
               </button>
@@ -105,7 +222,7 @@ const Login = () => {
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input type="checkbox" />
+              <input type="checkbox" disabled={loading} />
               <span>Remember me</span>
             </label>
             <a href="#" style={{ color: '#2d89ef', textDecoration: 'none' }}>
@@ -114,21 +231,66 @@ const Login = () => {
           </div>
           
           <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login to Dashboard'}
-          </button>       
-        
-          
-          <p className="register-link">
-             Don't have an account? <Link to="/register">Register as Patient</Link>
-          </p>
-          <button
-            type="button"
-            className="back-btn"
-            onClick={() => navigate('/')}
-          >
-            <i className="fas fa-arrow-left"></i> Back to Homepage
+            {loading ? (
+              <>
+                <i className="fas fa-spinner fa-spin"></i> Connecting to Backend...
+              </>
+            ) : (
+              'Login to Dashboard'
+            )}
           </button>
+          {/*
+          // أزرار الاختبار السريع 
+          <div style={{ margin: '25px 0 15px', textAlign: 'center' }}>
+            <p style={{ color: '#666', marginBottom: '10px', fontSize: '0.9rem' }}>
+              <i className="fas fa-vial"></i> Quick Test Logins:
+            </p>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn-test-admin"
+                onClick={() => handleTestLogin('admin@smarthealthcare.com', 'admin123', 'admin')}
+                disabled={loading}
+              >
+                Admin
+              </button>
+              <button
+                type="button"
+                className="btn-test-doctor"
+                onClick={() => handleTestLogin('sarah@smarthealthcare.com', 'password', 'doctor')}
+                disabled={loading}
+              >
+                Doctor
+              </button>
+              <button
+                type="button"
+                className="btn-test-patient"
+                onClick={() => handleTestLogin('dhai@example.com', 'password', 'patient')}
+                disabled={loading}
+              >
+                Patient
+              </button>
+            </div>
+          </div>
+          */}
+          
+          <div style={{ borderTop: '1px solid #eee', margin: '20px 0', paddingTop: '20px' }}>
+            <p className="register-link">
+              Don't have an account? <Link to="/register">Register as Patient</Link>
+            </p>
+            
+            <button
+              type="button"
+              className="back-btn"
+              onClick={() => navigate('/')}
+              disabled={loading}
+            >
+              <i className="fas fa-arrow-left"></i> Back to Homepage
+            </button>
+          </div>
         </form>
+
+        
       </div>
     </div>
   );

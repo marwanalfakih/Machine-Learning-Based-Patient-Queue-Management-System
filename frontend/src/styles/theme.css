@@ -2963,3 +2963,78 @@ body {
     flex-direction: column;
   }
 }
+
+/* Test buttons */
+.btn-test-admin, .btn-test-doctor, .btn-test-patient {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.3s;
+  color: white;
+}
+
+.btn-test-admin {
+  background: #e53935;
+}
+
+.btn-test-doctor {
+  background: #43a047;
+}
+
+.btn-test-patient {
+  background: #1e88e5;
+}
+
+.btn-test-admin:hover, .btn-test-doctor:hover, .btn-test-patient:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.btn-check-backend {
+  background: #6a1b9a;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-check-backend:hover {
+  background: #4a148c;
+}
+
+/* Debug info */
+.debug-info {
+  margin-top: 30px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  border-left: 4px solid #6a1b9a;
+}
+
+.debug-info h4 {
+  color: #6a1b9a;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.debug-content {
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.debug-content p {
+  margin: 5px 0;
+  font-family: 'Courier New', monospace;
+}
