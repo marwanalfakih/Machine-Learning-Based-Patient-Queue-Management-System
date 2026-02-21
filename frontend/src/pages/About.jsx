@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import "../styles/theme.css";
+import missionImage from '../assets/images/medical-missions-banner.jpg'; //
 
 const About = () => {
   const milestones = [
@@ -88,7 +89,9 @@ const About = () => {
               </p>
             </div>
             <div className="mission-image">
-              <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Healthcare Mission" />
+              <img 
+              src={missionImage} 
+              alt="Healthcare Mission" />
             </div>
           </div>
         </div>

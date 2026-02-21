@@ -1,0 +1,39 @@
+/* styles/pages/services.css */
+.services-hero {
+  background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+}
+
+.services-hero h1 {
+  color: var(--primary-dark);
+}
+
+.service-features {
+  list-style: none;
+  margin: var(--space-lg) 0;
+}
+
+.service-features li {
+  padding: var(--space-xs) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--text-secondary);
+}
+
+.service-features li i {
+  color: var(--secondary);
+}
+
+.service-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: var(--font-semibold);
+  margin-top: var(--space-lg);
+}
+
+.service-link:hover {
+  gap: var(--space-md);
+}

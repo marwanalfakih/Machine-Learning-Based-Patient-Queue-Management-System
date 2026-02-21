@@ -1,0 +1,89 @@
+/* styles/pages/home.css */
+.features-section {
+  padding: 80px 0;
+  background: var(--bg-primary);
+}
+
+.stats-section {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  padding: 60px 0;
+  color: var(--text-white);
+  text-align: center;
+}
+
+.stats-content h2 {
+  color: var(--text-white);
+  margin-bottom: var(--space-xl);
+}
+
+.badges {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.how-it-works {
+  background: var(--bg-secondary);
+  padding: 80px 0;
+}
+
+.steps-container {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-xl);
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+.step-card {
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+  padding: var(--space-xl);
+  position: relative;
+}
+
+.benefits-section {
+  padding: 80px 0;
+}
+
+.cta-section {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  color: var(--text-white);
+  padding: 80px 0;
+  text-align: center;
+}
+
+.cta-content h2 {
+  color: var(--text-white);
+  margin-bottom: var(--space-lg);
+}
+
+.cta-content p {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: var(--space-xl);
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: var(--space-lg);
+  justify-content: center;
+  flex-wrap: wrap;
+}

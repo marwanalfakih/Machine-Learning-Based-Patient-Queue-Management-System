@@ -1,0 +1,145 @@
+/* styles/dashboards/doctor-dashboard.css */
+.doctor-dashboard .dashboard-header {
+  background: linear-gradient(135deg, var(--secondary-dark), var(--secondary));
+}
+
+.doctor-dashboard .user-avatar {
+  background: linear-gradient(135deg, var(--secondary-dark), var(--secondary));
+}
+
+.doctor-dashboard .stat-value {
+  color: var(--secondary);
+}
+
+.doctor-dashboard .btn-primary {
+  background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+}
+
+.doctor-dashboard .appointments-timeline {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.doctor-dashboard .appointment-item {
+  display: flex;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-light);
+  gap: var(--space-md);
+}
+
+.doctor-dashboard .appointment-item:last-child {
+  border-bottom: none;
+}
+
+.doctor-dashboard .appointment-time {
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  min-width: 70px;
+}
+
+.doctor-dashboard .appointment-patient {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.doctor-dashboard .queue-number {
+  background: var(--secondary);
+  color: var(--text-white);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-semibold);
+}
+
+.doctor-dashboard .current-patient-card {
+  grid-column: span 2;
+}
+
+.doctor-dashboard .patient-info-section {
+  margin: var(--space-lg) 0;
+  padding: var(--space-lg);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.doctor-dashboard .patient-info-section h4 {
+  color: var(--primary-dark);
+  margin-bottom: var(--space-md);
+}
+
+.doctor-dashboard .detail-row {
+  display: flex;
+  margin-bottom: var(--space-sm);
+}
+
+.doctor-dashboard .detail-label {
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  min-width: 120px;
+}
+
+.doctor-dashboard .gps-checked {
+  color: var(--secondary);
+  font-weight: var(--font-medium);
+}
+
+.doctor-dashboard .medical-history ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.doctor-dashboard .medical-history li {
+  padding: var(--space-xs) 0;
+  padding-left: var(--space-lg);
+  position: relative;
+}
+
+.doctor-dashboard .medical-history li::before {
+  content: "•";
+  color: var(--secondary);
+  font-size: var(--font-size-xl);
+  position: absolute;
+  left: 0;
+}
+
+.doctor-dashboard .documents-list {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.doctor-dashboard .document-btn {
+  padding: var(--space-sm) var(--space-lg);
+  border: 2px solid var(--border-light);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--text-secondary);
+  transition: var(--transition-fast);
+}
+
+.doctor-dashboard .document-btn:hover {
+  border-color: var(--secondary);
+  color: var(--secondary);
+}
+
+.doctor-dashboard .doctor-actions {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-light);
+}
+
+.doctor-dashboard .action-btn {
+  flex: 1;
+  padding: var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}

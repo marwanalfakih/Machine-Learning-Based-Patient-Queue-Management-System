@@ -122,18 +122,7 @@ const Login = () => {
     }
   };
 
-  const handleTestLogin = (email, password, role) => {
-    setFormData({
-      email: email,
-      password: password,
-      role: role
-    });
-    
-    // إرسال تلقائي بعد تعبئة البيانات
-    setTimeout(() => {
-      document.querySelector('.login-btn').click();
-    }, 500);
-  };
+ 
 
   return (
     <div className="login-page">
@@ -239,40 +228,7 @@ const Login = () => {
               'Login to Dashboard'
             )}
           </button>
-          {/*
-          // أزرار الاختبار السريع 
-          <div style={{ margin: '25px 0 15px', textAlign: 'center' }}>
-            <p style={{ color: '#666', marginBottom: '10px', fontSize: '0.9rem' }}>
-              <i className="fas fa-vial"></i> Quick Test Logins:
-            </p>
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn-test-admin"
-                onClick={() => handleTestLogin('admin@smarthealthcare.com', 'admin123', 'admin')}
-                disabled={loading}
-              >
-                Admin
-              </button>
-              <button
-                type="button"
-                className="btn-test-doctor"
-                onClick={() => handleTestLogin('sarah@smarthealthcare.com', 'password', 'doctor')}
-                disabled={loading}
-              >
-                Doctor
-              </button>
-              <button
-                type="button"
-                className="btn-test-patient"
-                onClick={() => handleTestLogin('dhai@example.com', 'password', 'patient')}
-                disabled={loading}
-              >
-                Patient
-              </button>
-            </div>
-          </div>
-          */}
+          
           
           <div style={{ borderTop: '1px solid #eee', margin: '20px 0', paddingTop: '20px' }}>
             <p className="register-link">

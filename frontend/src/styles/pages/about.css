@@ -1,0 +1,116 @@
+/* styles/pages/about.css */
+.about-hero {
+  background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+}
+
+.about-hero h1 {
+  color: var(--primary-dark);
+}
+
+.mission-section {
+  padding: 80px 0;
+}
+
+.mission-content {
+  display: flex;
+  align-items: center;
+  gap: 50px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+.mission-text {
+  flex: 1;
+}
+
+.mission-text h2 {
+  color: var(--primary-dark);
+  margin-bottom: var(--space-lg);
+}
+
+.mission-image {
+  flex: 1;
+}
+
+.mission-image img {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.values-section {
+  background: var(--bg-secondary);
+  padding: 80px 0;
+}
+
+.timeline-section {
+  padding: 80px 0;
+}
+
+.timeline {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--primary);
+  transform: translateX(-50%);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 50px;
+  width: 50%;
+  padding: var(--space-lg);
+}
+
+.timeline-item.left {
+  left: 0;
+  text-align: right;
+  padding-right: 50px;
+}
+
+.timeline-item.right {
+  left: 50%;
+  padding-left: 50px;
+}
+
+.timeline-content {
+  background: var(--bg-primary);
+  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.timeline-year {
+  display: inline-block;
+  background: var(--primary);
+  color: var(--text-white);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-bold);
+  margin-bottom: var(--space-sm);
+}
+
+.team-section {
+  padding: 80px 0;
+  background: var(--bg-secondary);
+}
+
+.member-bio {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.about-stats-section {
+  padding: 60px 0;
+}

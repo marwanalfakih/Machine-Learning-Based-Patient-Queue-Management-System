@@ -1,0 +1,97 @@
+/* styles/base/variables.css */
+:root {
+  /* ========== الألوان الرئيسية ========== */
+  --primary: #2d89ef;
+  --primary-dark: #1e3a8a;
+  --primary-light: #4a7ac7;
+  --secondary: #43a047;
+  --secondary-dark: #2e7d32;
+  --secondary-light: #6abf69;
+  --danger: #d32f2f;
+  --warning: #ff9800;
+  --success: #43a047;
+  --info: #2d89ef;
+  
+  /* ========== ألوان إضافية من الكود الأصلي ========== */
+  --primary-alt: #2a5298;
+  --primary-alt-dark: #1e3c72;
+  --secondary-alt: #2d89ef;
+  --danger-alt: #e74c3c;
+  
+  /* ========== الألوان المحايدة ========== */
+  --text-primary: #1e2b3c;
+  --text-secondary: #4a5a6a;
+  --text-muted: #6c7a8a;
+  --text-light: #95a5a6;
+  --text-white: #ffffff;
+  
+  /* ========== ألوان الخلفية ========== */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafd;
+  --bg-tertiary: #f4f7fb;
+  --bg-dark: #1a1a2e;
+  --bg-gradient-start: #f5f7ff;
+  --bg-gradient-end: #e3e9ff;
+  
+  /* ========== ألوان الحدود ========== */
+  --border-light: #eef2f6;
+  --border-medium: #dde3e9;
+  --border-dark: #b0c4de;
+  
+  /* ========== الظلال ========== */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.15);
+  --shadow-primary: 0 6px 15px rgba(45, 137, 239, 0.2);
+  --shadow-secondary: 0 8px 20px rgba(67, 160, 71, 0.3);
+  --shadow-danger: 0 8px 20px rgba(211, 47, 47, 0.3);
+  
+  /* ========== الأبعاد ========== */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  
+  /* ========== المسافات ========== */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 40px;
+  --space-3xl: 60px;
+  
+  /* ========== الخطوط ========== */
+  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-size-xs: 0.75rem;   /* 12px */
+  --font-size-sm: 0.875rem;  /* 14px */
+  --font-size-md: 1rem;       /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 2rem;      /* 32px */
+  --font-size-4xl: 2.5rem;    /* 40px */
+  --font-size-5xl: 3rem;      /* 48px */
+  
+  /* ========== font weights ========== */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* ========== transitions ========== */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  
+  /* ========== z-index ========== */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-tooltip: 600;
+  --z-toast: 700;
+}

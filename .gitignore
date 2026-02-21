@@ -11,3 +11,23 @@ frontend/build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc
+
+# AI models
+saved_models/
+*.pkl
+*.h5
+
+# Data (لو لا تريد رفعها)
+*.csv
+
+# React
+node_modules/
+build/
+
+# Environment
+.env
+venv/
