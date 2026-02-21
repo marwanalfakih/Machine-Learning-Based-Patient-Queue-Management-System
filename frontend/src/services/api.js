@@ -3,6 +3,8 @@
 // export default API_URL;// services/api.js
 const API_URL = 'http://localhost:8000/api';
 
+//import '../styles/main.css';
+
 // تخزين التوكن
 let authToken = localStorage.getItem('token') || '';
 
@@ -35,7 +37,7 @@ const getAuthHeaders = () => {
 // دالة تسجيل الدخول
 export const login = async (email, password) => {
     try {
-        const response = await fetch(`${API_URL}/auth//auth.php`, {
+        const response = await fetch(`${API_URL}/auth/auth.php`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({

@@ -8,7 +8,7 @@ const Home = () => {
   const testBackend = async () => {
     try {
       const response = await fetch('http://localhost:8000/');
-      const data = await response.json();
+      const data = await response.json(); 
       alert(`✅ Backend Connected!\n\n${JSON.stringify(data, null, 2)}`);
     } catch (error) {
       alert(`❌ Backend Error:\n${error.message}`);

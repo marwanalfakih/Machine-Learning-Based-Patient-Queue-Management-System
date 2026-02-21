@@ -55,6 +55,16 @@ class User
 
         return $stmt->fetch();
     }
+    // [البحث بمعرف المستخدم] (dir="rtl") --> هذه الدالة المطلوبة لـ AuthMiddleware
+    public function findByID($userID)
+    {
+        $query = "SELECT * FROM " . $this->table . " WHERE userID = :userID LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":userID", $userID);
+        $stmt->execute();
+
+        return $stmt->fetch();
+    }
 
     // البحث باسم المستخدم
     public function findByUsername($username)

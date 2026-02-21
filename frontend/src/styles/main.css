@@ -1,0 +1,302 @@
+/* styles/main.css */
+
+/* Base */
+@import './base/variables.css';
+@import './base/reset.css';
+@import './base/typography.css';
+@import './base/utilities.css';
+
+/* Components */
+@import './components/buttons.css';
+@import './components/cards.css';
+@import './components/forms.css';
+@import './components/modals.css';
+@import './components/navigation.css';
+
+/* Layouts */
+@import './layouts/header.css';
+@import './layouts/footer.css';
+@import './layouts/sidebar.css';
+@import './layouts/grid.css';
+
+/* Pages */
+@import './pages/home.css';
+@import './pages/login.css';
+@import './pages/register.css';
+@import './pages/services.css';
+@import './pages/doctors.css';
+@import './pages/contact.css';
+@import './pages/about.css';
+
+/* Dashboards */
+@import './dashboards/patient-dashboard.css';
+@import './dashboards/doctor-dashboard.css';
+@import './dashboards/admin-dashboard.css';
+
+/* ========== Responsive Design ========== */
+@media (max-width: 1200px) {
+  .admin-view {
+    grid-template-columns: 1.5fr 1fr;
+  }
+}
+
+@media (max-width: 992px) {
+  .hero-container,
+  .mission-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .hero-buttons {
+    justify-content: center;
+  }
+
+  .admin-view {
+    grid-template-columns: 1fr;
+  }
+
+  .left-column,
+  .right-column {
+    gap: var(--space-md);
+  }
+
+  .timeline::before {
+    left: 30px;
+  }
+
+  .timeline-item {
+    width: 100%;
+    left: 0 !important;
+    padding-left: 70px;
+    padding-right: var(--space-lg);
+    text-align: left;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-stats-grid,
+  .compact-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-menu {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .dashboard-content {
+    flex-direction: column;
+    padding: 0 var(--space-md);
+  }
+
+  .sidebar {
+    width: 100%;
+    position: static;
+  }
+
+  .content-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+
+  .quick-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .appointment-details {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gps-checkin {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-steps {
+    gap: 20px;
+  }
+
+  .booking-steps::before {
+    left: 10%;
+    right: 10%;
+  }
+
+  .step-number {
+    width: 40px;
+    height: 40px;
+    font-size: var(--font-size-md);
+  }
+
+  .departments-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .doctor-card {
+    padding: var(--space-md);
+  }
+
+  .doctor-card::after {
+    display: none;
+  }
+
+  .booking-confirm {
+    padding: var(--space-lg);
+  }
+
+  .summary-card p {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .summary-card p strong {
+    min-width: auto;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  .services-grid,
+  .doctors-grid,
+  .features-grid,
+  .values-grid,
+  .team-grid,
+  .contact-methods-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .steps-container {
+    flex-direction: column;
+  }
+
+  .benefits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .specialties-filter {
+    flex-direction: column;
+  }
+
+  .specialty-btn {
+    width: 100%;
+  }
+
+  .doctor-actions {
+    flex-direction: column;
+  }
+
+  .patient-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .patient-actions {
+    margin-top: var(--space-sm);
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .compact-stats-grid,
+  .compact-actions-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .hero-content h1 {
+    font-size: var(--font-size-3xl);
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-stats-grid,
+  .compact-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tool-item {
+    padding: var(--space-md);
+  }
+
+  .queue-info {
+    flex-wrap: wrap;
+    gap: var(--space-md);
+  }
+
+  .queue-stat {
+    width: calc(50% - var(--space-md));
+  }
+
+  .appointment-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== Print Styles ========== */
+@media print {
+  .dashboard-header,
+  .sidebar,
+  .quick-actions,
+  .gps-checkin,
+  .btn,
+  .navbar,
+  .footer,
+  .mobile-menu-btn {
+    display: none !important;
+  }
+
+  .main-content {
+    margin: 0;
+    padding: 20px;
+  }
+
+  .card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+
+  body {
+    background: white;
+  }
+}

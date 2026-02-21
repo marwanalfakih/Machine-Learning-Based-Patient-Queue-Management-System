@@ -1,0 +1,228 @@
+/* styles/pages/register.css */
+.register-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px 50px;
+}
+
+.register-container {
+  background: var(--bg-primary);
+  padding: var(--space-2xl);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  max-width: 800px;
+  width: 100%;
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+}
+
+.register-header h2 {
+  color: var(--primary-dark);
+  margin-bottom: var(--space-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.registration-note {
+  background: #e8f0fe;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--primary);
+  margin-top: var(--space-lg);
+  text-align: left;
+}
+
+.registration-note i {
+  color: var(--primary);
+  margin-right: var(--space-sm);
+}
+
+.registration-steps {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 40px 0;
+  position: relative;
+}
+
+.step-divider {
+  flex: 1;
+  height: 2px;
+  background: var(--border-light);
+  position: relative;
+  z-index: 1;
+}
+
+.step-content {
+  margin: 40px 0;
+}
+
+.step-content h3 {
+  color: var(--primary-dark);
+  margin-bottom: var(--space-sm);
+}
+
+.step-description {
+  color: var(--text-muted);
+  margin-bottom: var(--space-xl);
+}
+
+.terms-section {
+  margin-top: var(--space-xl);
+  padding: var(--space-xl);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.terms-section h4 {
+  color: var(--primary-dark);
+  margin-bottom: var(--space-lg);
+}
+
+.term-item {
+  margin-bottom: var(--space-md);
+}
+
+.review-step .review-sections {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: var(--space-sm);
+}
+
+.review-section {
+  margin-bottom: var(--space-xl);
+  padding: var(--space-lg);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.review-section h4 {
+  color: var(--primary-dark);
+  margin-bottom: var(--space-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.edit-btn:hover {
+  background: rgba(45, 137, 239, 0.1);
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+.review-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.review-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.review-value {
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
+}
+
+.status-pending {
+  color: var(--warning);
+  background: #fff4e6;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  display: inline-block;
+}
+
+.final-note {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: #e8f0fe;
+  border-radius: var(--radius-md);
+  margin-top: var(--space-xl);
+  border-left: 4px solid var(--primary);
+}
+
+.note-icon {
+  color: var(--primary);
+  font-size: var(--font-size-2xl);
+  flex-shrink: 0;
+}
+
+.note-content h5 {
+  color: var(--primary-dark);
+  margin-bottom: var(--space-sm);
+}
+
+.form-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+
+.step-indicator {
+  color: var(--text-muted);
+}
+
+.current-step {
+  background: var(--bg-secondary);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+}
+
+.form-footer {
+  margin-top: var(--space-xl);
+  text-align: center;
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-light);
+  color: var(--text-muted);
+}
+
+.login-link,
+.help-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: var(--font-semibold);
+  margin-left: var(--space-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.login-link:hover,
+.help-link:hover {
+  text-decoration: underline;
+}
