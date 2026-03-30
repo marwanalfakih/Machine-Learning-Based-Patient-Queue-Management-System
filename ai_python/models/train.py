@@ -5,10 +5,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
-import joblib
+import joblib 
+
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+from tensorflow.keras import layers # type: ignore
+
 import os
 import sys
 import json
@@ -37,7 +38,7 @@ class ModelTrainer:
             'queue_position', 'total_patients', 
             'doctor_experience'
         ]
-        self.save_dir = 'saved_models'
+        self.save_dir = 'ai_python/saved_models'
         
     def load_data(self):
         """تحميل أو توليد البيانات باستخدام SyntheticDataGenerator"""
@@ -187,8 +188,9 @@ class ModelTrainer:
         print("\n" + "="*40)
         print("🧠 Training Neural Network...")
         
-        model = keras.Sequential([
-            layers.Dense(64, activation='relu', input_shape=[X_train.shape[1]]),
+        model = tf.keras.Sequential([ # type: ignore
+            tf.keras.Input(shape=(X_train.shape[1],)), # type: ignore
+            layers.Dense(64, activation='relu'),
             layers.Dropout(0.2),
             layers.Dense(32, activation='relu'),
             layers.Dropout(0.2),
@@ -197,12 +199,12 @@ class ModelTrainer:
         ])
         
         model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=0.001),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), # type: ignore
             loss='mse',
             metrics=['mae']
         )
         
-        early_stop = keras.callbacks.EarlyStopping(
+        early_stop = tf.keras.callbacks.EarlyStopping( # type: ignore
             monitor='val_loss',
             patience=10,
             restore_best_weights=True
@@ -285,10 +287,10 @@ class ModelTrainer:
                 print(f"  ✅ Saved random_forest.pkl")
             
             elif name == 'neural_network':
-                path = f'{self.save_dir}/neural_network.h5'
+                path = f'{self.save_dir}/neural_network.keras'
                 model.save(path)
-                print(f"  ✅ Saved neural_network.h5")
-        
+                print(f"  ✅ Saved neural_network.keras")
+         
         # حفظ metrics
         metrics_path = f'{self.save_dir}/metrics.json'
         with open(metrics_path, 'w') as f:

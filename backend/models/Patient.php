@@ -23,7 +23,8 @@ class Patient
     // إنشاء مريض جديد
     public function create($data)
     {
-        $patientID = 'PAT_' . uniqid() . '_' . time();
+        //$patientID = 'PAT_' . uniqid() . '_' . time();
+        $patientID = 'PAT_' . str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $query = "INSERT INTO " . $this->table . " 
                   (patientID, userID, fullName, dateOfBirth, gender, address, 
@@ -68,7 +69,7 @@ class Patient
     // البحث بواسطة patientID
     public function findByID($patientID)
     {
-        $query = "SELECT p.*, u.email, u.phone, u.username 
+        $query = "SELECT p.*, u.email, u.phone, u.username, u.created_at, u.is_active 
                   FROM " . $this->table . " p 
                   JOIN Users u ON p.userID = u.userID 
                   WHERE p.patientID = :patientID LIMIT 1";
@@ -79,6 +80,23 @@ class Patient
 
         return $stmt->fetch();
     }
+
+    // البحث بواسطة patientID
+    public function findByIDForAdmin($patientID)
+    {
+        $query = "SELECT p.*, u.email, u.phone, u.username, u.created_at, u.is_active, r.recordID 
+                  FROM " . $this->table . " p 
+                  JOIN Users u ON p.userID = u.userID 
+                  JOIN medicalrecords r ON p.patientID = r.patientID
+                  WHERE p.patientID = :patientID LIMIT 1";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":patientID", $patientID);
+        $stmt->execute();
+
+        return $stmt->fetch();
+    }
+
 
     // تحديث بيانات المريض
     public function update($patientID, $data)
@@ -139,6 +157,59 @@ class Patient
         $stmt = $this->conn->prepare($query);
         $searchTerm = "%" . $name . "%";
         $stmt->bindParam(":name", $searchTerm);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * حذف مريض
+     * @param string $patientID معرف المريض
+     * @return bool نجاح أو فشل
+     */
+    public function delete($patientID)
+    {
+        $query = "DELETE FROM " . $this->table . " WHERE patientID = :patientID";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':patientID', $patientID);
+        return $stmt->execute();
+    }
+
+    /**
+     * الحصول على إحصائيات المرضى للأدمن
+     * @return array إحصائيات المرضى
+     */
+    public function getPatientStats()
+    {
+        $query = "SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) < 18 THEN 1 ELSE 0 END) as children,
+                    SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) BETWEEN 18 AND 60 THEN 1 ELSE 0 END) as adults,
+                    SUM(CASE WHEN TIMESTAMPDIFF(YEAR, dateOfBirth, CURDATE()) > 60 THEN 1 ELSE 0 END) as seniors,
+                    COUNT(DISTINCT bloodType) as bloodTypes
+                  FROM " . $this->table;
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * جلب أحدث المرضى المسجلين
+     * @param int $limit عدد النتائج
+     * @return array قائمة أحدث المرضى
+     */
+    public function getRecentPatients($limit = 10)
+    {
+        $query = "SELECT p.*, u.email, u.phone, u.created_at
+                  FROM " . $this->table . " p 
+                  JOIN users u ON p.userID = u.userID
+                  ORDER BY u.created_at DESC
+                  LIMIT :limit";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":limit", $limit, PDO::PARAM_INT);
         $stmt->execute();
 
         return $stmt->fetchAll();

@@ -31,3 +31,8 @@ build/
 # Environment
 .env
 venv/
+
+smrt_env/
+venv/
+__pycache__/
+*.pyc

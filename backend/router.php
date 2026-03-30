@@ -1,5 +1,5 @@
 <?php
-// router.php
+// backend/router.php
 require_once __DIR__ . '/middleware/AuthMiddleware.php';
 
 class Router

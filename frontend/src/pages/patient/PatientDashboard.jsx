@@ -1,3 +1,5 @@
+// patient/PatientDashboard.jsx
+/* global L */
 import React, { useState, useEffect, useRef} from 'react';
 import { useNavigate } from 'react-router-dom';
 import "../../styles/theme.css";
@@ -33,13 +35,18 @@ const PatientDashboard = () => {
   const [showMap, setShowMap] = useState(false);
   const [locationData, setLocationData] = useState(null);
 
+  // دالة للتحقق مما إذا كان المريض قد قام بـ Check-in اليوم
+  const hasCheckedInToday = () => {
+    return queueData?.inQueue === true;
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     console.log('1. Checking token in localStorage:', token ? 'Token exists' : 'No token');
     
     if (!token) {
       console.log('2. No token found, redirecting to login');
-      navigate('/login');
+      navigate('/login'); 
       return;
     }
     
@@ -48,7 +55,7 @@ const PatientDashboard = () => {
   }, []);
 
   // التحقق من حالة AI
-  const checkAIStatus = async () => {
+const checkAIStatus = async () => {
     try {
       // تحقق من Python service (قد لا يكون موجوداً)
       try {
@@ -175,11 +182,40 @@ useEffect(() => {
       });
 
       const data = await response.json();
-
+      {/*
       if (response.ok && data.success) {
         setAppointments(data.appointments || []);
         console.log('Appointments loaded:', data.appointments);
-      } else {
+      }*/}
+
+      if (response.ok && data.success) {
+        // الحصول على تاريخ اليوم (بدون وقت)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // تصفية المواعيد القادمة فقط
+        const upcomingAppointments = (data.appointments || []).filter(app => {
+          // استبعاد المواعيد الملغاة أو المكتملة
+          if (app.status === 'cancelled' || app.status === 'completed') {
+            return false;
+          }
+          
+          // مقارنة تاريخ الموعد مع اليوم
+          const appointmentDate = new Date(app.appointmentDate);
+          //const appointmentDate = new Date(app.appointmentDate.replace(' ', 'T'));
+          appointmentDate.setHours(0, 0, 0, 0);
+          
+          // موعد قادم إذا كان تاريخه >= اليوم
+          return appointmentDate >= today;
+        });
+        
+        // ترتيب المواعيد من الأقرب إلى الأبعد
+        upcomingAppointments.sort((a, b) => new Date(a.appointmentDate) - new Date(b.appointmentDate));
+        
+        setAppointments(upcomingAppointments);
+        console.log('✅ Upcoming appointments:', upcomingAppointments);
+      }
+       else {
         console.warn('Failed to load appointments:', data.error);
         setAppointments([]);
       }
@@ -408,11 +444,12 @@ useEffect(() => {
   const getTodaysAppointment = () => {
     if (!appointments || appointments.length === 0) return null;
     
-    const today = new Date().toISOString().split('T')[0];
-    //const today = new Date().toLocaleDateString('en-CA');
+    //const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA');
 
     return appointments.find(app => {
-      const appDate = new Date(app.appointmentDate).toISOString().split('T')[0];
+      //const appDate = new Date(app.appointmentDate).toISOString().split('T')[0];
+      const appDate = new Date(app.appointmentDate).toLocaleDateString('en-CA');
       return appDate === today;
     });
   };
@@ -618,8 +655,8 @@ useEffect(() => {
   );
 };
 
-// ==================== مكون GPSButton المحدث مع AI ====================
-const GPSButton = ({ onCheckIn, disabled, gpsStatus }) => {
+// ==================== مكون GPSButton مع AI ====================
+const GPSButton = ({ onCheckIn, disabled, gpsStatus, hasCheckedIn }) => {
   const [checking, setChecking] = useState(false);
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
 
@@ -648,7 +685,7 @@ const GPSButton = ({ onCheckIn, disabled, gpsStatus }) => {
     try {
       // محاولة الحصول على الموقع
       const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        navigator.geolocation.getCurrentPosition(resolve, reject, options); // get the current position of the device using the Geolocation API.
       });
 
       const { latitude, longitude, accuracy } = position.coords;
@@ -697,6 +734,19 @@ const GPSButton = ({ onCheckIn, disabled, gpsStatus }) => {
       setChecking(false);
     }
   };
+
+  // إذا كان قد تم Check-in بالفعل، اعرض زر "Checked In" معطل
+  if (hasCheckedIn) {
+    return (
+      <button 
+        className="gps-checkin-btn success"
+        disabled={true}
+      >
+        <i className="fas fa-check-circle"></i>
+        Checked In
+      </button>
+    );
+  }
   
 
   return (
@@ -780,6 +830,7 @@ const MapView = ({ patientLocation, hospitalLocation, distance, estimatedTime, o
   const mapRef = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [error, setError] = useState(null);
+  const [leafletLoaded, setLeafletLoaded] = useState(typeof L !== 'undefined');
 
   useEffect(() => {
     // في حالة عدم وجود Google Maps API، نستخدم OpenStreetMap كبديل
@@ -927,7 +978,6 @@ const MapView = ({ patientLocation, hospitalLocation, distance, estimatedTime, o
   );
 };
 
-
 // ==================== مكون DashboardContent ====================
 const DashboardContent = ({ 
   patientData, 
@@ -945,6 +995,9 @@ const DashboardContent = ({
     const date = new Date(dateString);
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
+
+  // التحقق مما إذا كان المريض قد قام بـ Check-in
+  const hasCheckedIn = queueData?.inQueue === true;
 
   return (
     <>
@@ -998,6 +1051,7 @@ const DashboardContent = ({
               onCheckIn={onGPSCheckIn}
               disabled={!todaysAppointment}
               gpsStatus={gpsStatus}
+              hasCheckedIn={hasCheckedIn}  // ✅ تمرير القيمة الجديدة
             />
           </div>
         </div>
@@ -1062,7 +1116,7 @@ const DashboardContent = ({
               
 
               {/* AI Prediction Info */}
-              {queueData.aiPredictedWait && (
+              {hasCheckedIn && queueData?.aiPredictedWait && (
                 <div className="ai-prediction-info">
                   <div className="ai-prediction-row">
                     <i className="fas fa-microchip"></i>
@@ -1128,7 +1182,7 @@ const DashboardContent = ({
       </div>
 
       {/* المواعيد القادمة */}
-      {appointments && appointments.length > 0 && (
+      {appointments && appointments.length > 0 && ( 
         <div className="card upcoming-card">
           <h3>UPCOMING APPOINTMENTS</h3>
           <div className="appointments-list">

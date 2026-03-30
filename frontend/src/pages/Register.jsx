@@ -164,7 +164,7 @@ const Register = () => {
       console.log('✅ Registration successful!');
       
       // عرض رسالة نجاح
-      alert('✅ Registration submitted successfully!\n\nYour account has been created and is pending admin approval.');
+      alert('✅ Registration submitted successfully.');
       
       // Redirect to login page
       setTimeout(() => {

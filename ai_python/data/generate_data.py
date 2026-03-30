@@ -121,8 +121,12 @@ class SyntheticDataGenerator:
         print("\nWaiting Time by Day:")
         days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         daily = self.data.groupby('day_of_week')['waiting_time'].mean()
-        for day, wait in daily.items():
-            print(f"  {days[day]}: {wait:.1f} minutes")
+        daily_df = daily.reset_index()
+        daily_df.columns = ['day_of_week', 'waiting_time']
+
+        for _, row in daily_df.iterrows():
+            day_int = int(row['day_of_week'])
+            print(f"  {days[day_int]}: {row['waiting_time']:.1f} minutes")
 
 if __name__ == '__main__':
     generator = SyntheticDataGenerator()

@@ -1,4 +1,5 @@
 <?php
+// api/patient/patients.php
 // إضافة رؤوس CORS في بداية الملف
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");

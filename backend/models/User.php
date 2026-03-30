@@ -22,7 +22,8 @@ class User
     // إنشاء مستخدم جديد
     public function create($data)
     {
-        $userID = 'USR_' . uniqid() . '_' . time();
+        //$userID = 'USR_' . uniqid() . '_' . time();
+        $userID = 'USR_' . str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $query = "INSERT INTO " . $this->table . " 
                   (userID, username, password, email, phone, userType, is_active) 
@@ -102,6 +103,7 @@ class User
         return $stmt->rowCount() > 0;
     }
 
+
     // تحديث حالة المستخدم
     public function updateStatus($userID, $is_active)
     {
@@ -131,6 +133,49 @@ class User
         return $stmt->execute();
     }
 
+    /**
+     * تحديث بيانات المستخدم
+     * @param string $userID معرف المستخدم
+     * @param array $data بيانات التحديث
+     * @return bool نجاح أو فشل
+     */
+    public function update($userID, $data)
+    {
+        $fields = [];
+        $params = [':userID' => $userID];
+
+        $allowedFields = ['email', 'phone', 'is_active'];
+
+        foreach ($allowedFields as $field) {
+            if (isset($data[$field])) {
+                $fields[] = "$field = :$field";
+                $params[":$field"] = $data[$field];
+            }
+        }
+
+        if (isset($data['password'])) {
+            $fields[] = "password = :password";
+            $params[':password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        }
+
+        if (empty($fields)) {
+            return false;
+        }
+
+        $fields[] = "updated_at = NOW()";
+
+        $query = "UPDATE " . $this->table . " SET " . implode(', ', $fields) . " WHERE userID = :userID";
+        $stmt = $this->conn->prepare($query);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+
+        return $stmt->execute();
+    }
+
+
+
     // حذف مستخدم
     public function delete($userID)
     {
@@ -157,5 +202,26 @@ class User
         $stmt->execute();
 
         return $stmt->fetchAll();
+    }
+
+
+    /**
+     * جلب إحصائيات المستخدمين للأدمن
+     * @return array إحصائيات المستخدمين
+     */
+    public function getUserStats()
+    {
+        $query = "SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN userType = 'patient' THEN 1 ELSE 0 END) as patients,
+                    SUM(CASE WHEN userType = 'doctor' THEN 1 ELSE 0 END) as doctors,
+                    SUM(CASE WHEN userType = 'admin' THEN 1 ELSE 0 END) as admins,
+                    SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active
+                  FROM " . $this->table;
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }

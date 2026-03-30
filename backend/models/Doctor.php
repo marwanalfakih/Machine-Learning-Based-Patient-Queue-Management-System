@@ -1,4 +1,5 @@
 <?php
+//models/Doctor.php
 class Doctor
 {
     private $conn;
@@ -23,7 +24,8 @@ class Doctor
     // إنشاء طبيب جديد
     public function create($data)
     {
-        $doctorID = 'DOC_' . uniqid() . '_' . time();
+        //$doctorID = 'DOC_' . uniqid() . '_' . time();
+        $doctorID = 'DOC_' . str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $query = "INSERT INTO " . $this->table . " 
                   (doctorID, userID, fullName, specialization, licenseNumber, 
@@ -149,6 +151,97 @@ class Doctor
         $stmt = $this->conn->prepare($query);
         $searchTerm = "%" . $name . "%";
         $stmt->bindParam(":name", $searchTerm);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+    // -------------------------------------------------------------
+    /**
+     * تحديث بيانات الطبيب
+     * @param string $doctorID معرف الطبيب
+     * @param array $data بيانات التحديث
+     * @return bool نجاح أو فشل
+     */
+    public function update($doctorID, $data)
+    {
+        $fields = [];
+        $params = [':doctorID' => $doctorID];
+
+        $allowedFields = [
+            'fullName',
+            'specialization',
+            'licenseNumber',
+            'qualifications',
+            'department',
+            'yearsOfExperience',
+            'consultationFee',
+            'isAvailable'
+        ];
+
+        foreach ($allowedFields as $field) {
+            if (isset($data[$field])) {
+                $fields[] = "$field = :$field";
+                $params[":$field"] = $data[$field];
+            }
+        }
+
+        if (empty($fields)) {
+            return false;
+        }
+
+        $query = "UPDATE " . $this->table . " SET " . implode(', ', $fields) . " WHERE doctorID = :doctorID";
+        $stmt = $this->conn->prepare($query);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+
+        return $stmt->execute();
+    }
+
+    /**
+     * حذف طبيب
+     * @param string $doctorID معرف الطبيب
+     * @return bool نجاح أو فشل
+     */
+    public function delete($doctorID)
+    {
+        $query = "DELETE FROM " . $this->table . " WHERE doctorID = :doctorID";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':doctorID', $doctorID);
+        return $stmt->execute();
+    }
+
+    /**
+     * الحصول على إحصائيات الأطباء للأدمن
+     * @return array إحصائيات الأطباء
+     */
+    public function getDoctorStats()
+    {
+        $query = "SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN isAvailable = 1 THEN 1 ELSE 0 END) as available,
+                    COUNT(DISTINCT specialization) as specializations
+                  FROM " . $this->table;
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * الحصول على توزيع الأطباء حسب التخصص
+     * @return array توزيع التخصصات
+     */
+    public function getSpecializationDistribution()
+    {
+        $query = "SELECT specialization, COUNT(*) as count 
+                  FROM " . $this->table . " 
+                  GROUP BY specialization 
+                  ORDER BY count DESC";
+
+        $stmt = $this->conn->prepare($query);
         $stmt->execute();
 
         return $stmt->fetchAll();

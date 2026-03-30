@@ -12,7 +12,8 @@ class Notification
 
     public function create($data)
     {
-        $notificationID = 'NOT_' . uniqid() . '_' . time();
+        //$notificationID = 'NOT_' . uniqid() . '_' . time();
+        $notificationID = 'NOT_' . str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $query = "INSERT INTO " . $this->table . "
                   (notificationID, userID, notificationType, title, message, data, status, channel, sentTime)

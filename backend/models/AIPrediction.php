@@ -85,6 +85,26 @@ class AIPrediction
     }
 
     /**
+     * الحصول على إحصائيات عامة للتنبؤات
+     * @return array إحصائيات
+     */
+    public function getStats()
+    {
+        $query = "SELECT 
+                    COUNT(*) as totalPredictions,
+                    COUNT(DISTINCT modelType) as uniqueModels,
+                    AVG(confidence) as avgConfidence,
+                    MAX(createdAt) as lastPrediction
+                  FROM " . $this->table . "
+                  WHERE createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * الحصول على بيانات التدريب
      */
     public function getTrainingData($days = 30)
@@ -121,6 +141,75 @@ class AIPrediction
 
         return $stmt->fetchAll();
     }
+
+    /**
+     * الحصول على إحصائيات حسب النموذج
+     * @return array إحصائيات النماذج
+     */
+    public function getModelStatsForAdmin()
+    {
+        $query = "SELECT 
+                    modelType,
+                    COUNT(*) as predictionCount,
+                    AVG(confidence) as avgConfidence,
+                    AVG(predictedTime) as avgPredictedTime,
+                    AVG(actualTime) as avgActualTime,
+                    MIN(createdAt) as firstUsed,
+                    MAX(createdAt) as lastUsed
+                  FROM " . $this->table . "
+                  WHERE actualTime IS NOT NULL
+                  GROUP BY modelType
+                  ORDER BY predictionCount DESC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+
+        $models = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            // حساب الدقة
+            $accuracy = null;
+            if ($row['avgPredictedTime'] && $row['avgActualTime']) {
+                $accuracy = 100 - (abs($row['avgPredictedTime'] - $row['avgActualTime']) / $row['avgActualTime'] * 100);
+            }
+
+            $models[] = [
+                'modelType' => $row['modelType'],
+                'predictionCount' => (int)$row['predictionCount'],
+                'avgConfidence' => round((float)$row['avgConfidence'] * 100, 1),
+                'avgPredictedTime' => (int)$row['avgPredictedTime'],
+                'avgActualTime' => (int)$row['avgActualTime'],
+                'accuracy' => $accuracy ? round($accuracy, 1) : null,
+                'firstUsed' => $row['firstUsed'],
+                'lastUsed' => $row['lastUsed']
+            ];
+        }
+
+        return $models;
+    }
+
+    /**
+     * الحصول على التنبؤات الأخيرة
+     * @param int $limit عدد النتائج
+     * @return array التنبؤات الأخيرة
+     */
+    public function getRecentPredictions($limit = 20)
+    {
+        $query = "SELECT p.*, 
+                         pat.fullName as patientName,
+                         doc.fullName as doctorName
+                  FROM " . $this->table . " p
+                  LEFT JOIN patients pat ON p.patientID = pat.patientID
+                  LEFT JOIN doctors doc ON p.doctorID = doc.doctorID
+                  ORDER BY p.createdAt DESC
+                  LIMIT :limit";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
 
     /**
      * الحصول على توزيع التنبؤات حسب الساعة
