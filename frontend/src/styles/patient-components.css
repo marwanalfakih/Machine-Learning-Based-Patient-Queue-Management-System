@@ -2829,3 +2829,29 @@
   0% { transform: translateX(-100%) rotate(45deg); }
   100% { transform: translateX(100%) rotate(45deg); }
 }
+
+/* زر التعديل */
+.appointment-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(42, 82, 152, 0.1);
+  color: var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.edit-btn:hover {
+  background: var(--primary);
+  color: white;
+  transform: scale(1.1);
+}

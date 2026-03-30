@@ -32,6 +32,9 @@ require_once __DIR__ . '/models/User.php';
 require_once __DIR__ . '/models/Patient.php';
 require_once __DIR__ . '/models/Doctor.php';
 require_once __DIR__ . '/models/Appointment.php';
+require_once __DIR__ . '/models/Admin.php';
+require_once __DIR__ . '/models/Queue.php';
+require_once __DIR__ . '/models/AIPrediction.php';
 
 // إنشاء اتصال قاعدة البيانات
 try {
@@ -88,6 +91,32 @@ $router->addRoute('POST', '/appointments/:id/checkin', 'AppointmentController', 
 $router->addRoute('GET', '/doctors', 'DoctorController', 'getAllDoctors');
 $router->addRoute('GET', '/doctors/specialization/:specialization', 'DoctorController', 'getDoctorsBySpecialization');
 $router->addRoute('GET', '/doctors/:id', 'DoctorController', 'getDoctorByID');
+
+// =========== مسارات الأدمن (محمية) ===========
+$router->addRoute('GET', '/admin/dashboard', 'AdminController', 'getDashboard', ['admin']);
+$router->addRoute('GET', '/admin/doctors', 'AdminController', 'getDoctors', ['admin']);
+$router->addRoute('GET', '/admin/doctors/:id', 'AdminController', 'getDoctor', ['admin']);
+$router->addRoute('POST', '/admin/doctors', 'AdminController', 'createDoctor', ['admin']);
+$router->addRoute('PUT', '/admin/doctors/:id', 'AdminController', 'updateDoctor', ['admin']);
+$router->addRoute('DELETE', '/admin/doctors/:id', 'AdminController', 'deleteDoctor', ['admin']);
+$router->addRoute('POST', '/admin/doctors/:id/toggle', 'AdminController', 'toggleDoctorStatus', ['admin']);
+
+$router->addRoute('GET', '/admin/patients', 'AdminController', 'getPatients', ['admin']);
+$router->addRoute('GET', '/admin/patients/:id', 'AdminController', 'getPatient', ['admin']);
+$router->addRoute('PUT', '/admin/patients/:id', 'AdminController', 'updatePatient', ['admin']);
+$router->addRoute('DELETE', '/admin/patients/:id', 'AdminController', 'deletePatient', ['admin']);
+
+$router->addRoute('GET', '/admin/appointments', 'AdminController', 'getAppointments', ['admin']);
+$router->addRoute('GET', '/admin/appointments/:id', 'AdminController', 'getAppointment', ['admin']);
+$router->addRoute('PUT', '/admin/appointments/:id/status', 'AdminController', 'updateAppointmentStatus', ['admin']);
+$router->addRoute('DELETE', '/admin/appointments/:id', 'AdminController', 'deleteAppointment', ['admin']);
+
+$router->addRoute('GET', '/admin/queue', 'AdminController', 'getQueue', ['admin']);
+$router->addRoute('PUT', '/admin/queue/:id', 'AdminController', 'updateQueue', ['admin']);
+$router->addRoute('DELETE', '/admin/queue/:id', 'AdminController', 'removeFromQueue', ['admin']);
+
+$router->addRoute('GET', '/admin/reports/:type', 'AdminController', 'getReport', ['admin']);
+$router->addRoute('GET', '/admin/ai-models', 'AdminController', 'getAIModels', ['admin']);
 
 // معالجة الطلب
 $router->handleRequest();

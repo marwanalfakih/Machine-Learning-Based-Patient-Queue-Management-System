@@ -561,7 +561,7 @@ body {
 }
 
 .back-btn {
-  width: 40%;
+  width: 100%;
   padding: 12px;
   background: transparent;
   border: 2px solid #2d89ef;
@@ -569,6 +569,8 @@ body {
   cursor: pointer;
   font-weight: 500;
   transition: all 0.3s;
+  
+  
 }
 
 .back-btn:hover {

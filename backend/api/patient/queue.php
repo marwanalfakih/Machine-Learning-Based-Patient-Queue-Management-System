@@ -1,4 +1,5 @@
 <?php
+//  api/patient/queue.php
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, OPTIONS");
@@ -43,6 +44,7 @@ $queueModel = new Queue($db);
 $queueData = $queueModel->getPatientPosition($patient['patientID']);
 
 // ========== إضافة توقعات AI ==========
+/*
 if ($queueData && isset($queueData['inQueue']) && $queueData['inQueue']) {
     // استدعاء AI للحصول على توقع أفضل
     $aiPrediction = getAIPrediction(
@@ -65,6 +67,7 @@ if ($queueData && isset($queueData['inQueue']) && $queueData['inQueue']) {
         }
     }
 }
+    */
 
 // إرجاع النتيجة
 echo json_encode([
@@ -96,7 +99,7 @@ function getAIPrediction($doctorID, $position, $patientID)
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+
 
     if ($httpCode === 200 && $response) {
         return json_decode($response, true);

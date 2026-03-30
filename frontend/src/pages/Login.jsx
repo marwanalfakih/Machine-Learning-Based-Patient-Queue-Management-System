@@ -66,7 +66,7 @@ const Login = () => {
       const responseText = await response.text();
       console.log('Raw response:', responseText);
       
-      let data;
+      let data; 
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
@@ -150,6 +150,7 @@ const Login = () => {
             <div>
               <strong>Error:</strong> 
               <div style={{ whiteSpace: 'pre-line', marginTop: '5px' }}>{}</div>
+              <div>{error} </div>
             </div>
           </div>
         )}

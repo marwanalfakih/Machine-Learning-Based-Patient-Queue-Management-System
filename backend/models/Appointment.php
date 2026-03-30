@@ -1,4 +1,5 @@
 <?php
+// models/Appointment.php
 class Appointment
 {
     private $conn;
@@ -23,7 +24,8 @@ class Appointment
     // إنشاء موعد جديد
     public function create($data)
     {
-        $appointmentID = 'APT_' . uniqid() . '_' . time();
+        //$appointmentID = 'APT_' . uniqid() . '_' . time();
+        $appointmentID = 'APT_' . str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $query = "INSERT INTO " . $this->table . " 
                   (appointmentID, patientID, doctorID, appointmentDate, status, type, reason, notes) 
@@ -205,6 +207,83 @@ class Appointment
             $stmt->bindParam(":patientID", $patientID);
         }
 
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * تحديث موعد موجود
+     * @param string $appointmentID معرف الموعد
+     * @param array $data بيانات التحديث
+     * @return bool نجاح أو فشل
+     */
+    public function update($appointmentID, $data)
+    {
+        $query = "UPDATE " . $this->table . "
+                  SET doctorID = :doctorID,
+                      appointmentDate = :appointmentDate,
+                      type = :type,
+                      reason = :reason,
+                      notes = :notes,
+                      updated_at = CURRENT_TIMESTAMP
+                  WHERE appointmentID = :appointmentID";
+
+        $stmt = $this->conn->prepare($query);
+
+        $stmt->bindParam(":appointmentID", $appointmentID);
+        $stmt->bindParam(":doctorID", $data['doctorID']);
+        $stmt->bindParam(":appointmentDate", $data['appointmentDate']);
+        $stmt->bindParam(":type", $data['type']);
+        $stmt->bindParam(":reason", $data['reason']);
+        $stmt->bindParam(":notes", $data['notes']);
+
+        return $stmt->execute();
+    }
+
+    /**
+     * جلب إحصائيات المواعيد للأدمن
+     * @return array إحصائيات المواعيد
+     */
+    public function getAppointmentStats()
+    {
+        $query = "SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN DATE(appointmentDate) = CURDATE() THEN 1 ELSE 0 END) as today,
+                    SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) as scheduled,
+                    SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed,
+                    SUM(CASE WHEN status = 'checked-in' THEN 1 ELSE 0 END) as checked_in,
+                    SUM(CASE WHEN status = 'in-progress' THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                    SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+                    SUM(CASE WHEN status = 'no-show' THEN 1 ELSE 0 END) as no_show
+                  FROM " . $this->table;
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * جلب المواعيد حسب التاريخ
+     * @param string $date التاريخ
+     * @return array قائمة المواعيد
+     */
+    public function getByDate($date)
+    {
+        $query = "SELECT a.*, 
+                         p.fullName as patientName,
+                         d.fullName as doctorName,
+                         d.specialization
+                  FROM " . $this->table . " a
+                  JOIN patients p ON a.patientID = p.patientID
+                  JOIN doctors d ON a.doctorID = d.doctorID
+                  WHERE DATE(a.appointmentDate) = :date
+                  ORDER BY a.appointmentDate";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":date", $date);
         $stmt->execute();
 
         return $stmt->fetchAll();

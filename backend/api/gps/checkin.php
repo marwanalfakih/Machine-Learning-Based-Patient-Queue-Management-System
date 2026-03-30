@@ -20,10 +20,10 @@ require_once '../../models/Notification.php';
 require_once '../../models/AIPrediction.php';
 
 // إحداثيات المستشفى
-define('HOSPITAL_LAT', 30.03043); // taif مجمع الملك فيصل الطبي
-define('HOSPITAL_LNG', 31.23149);
-//define('HOSPITAL_LAT', 21.24545); // taif مجمع الملك فيصل الطبي
-//define('HOSPITAL_LNG', 40.41980);
+//define('HOSPITAL_LAT', 30.03043); // taif مجمع الملك فيصل الطبي
+//define('HOSPITAL_LNG', 31.23149);
+define('HOSPITAL_LAT', 21.24545); // taif مجمع الملك فيصل الطبي
+define('HOSPITAL_LNG', 40.41980);
 define('CHECKIN_RADIUS', 5000); // 5 كم للاختبار
 define('MIN_ACCURACY', 500); // دقة مقبولة
 
@@ -77,8 +77,10 @@ if (!isset($input['latitude']) || !isset($input['longitude']) || !isset($input['
     exit;
 }
 
-$latitude = floatval($input['latitude']);
-$longitude = floatval($input['longitude']);
+//$latitude = floatval($input['latitude']);
+//$longitude = floatval($input['longitude']);
+$latitude = 21.25561;
+$longitude = 40.42975;
 $accuracy = floatval($input['accuracy']);
 $travelMode = $input['travelMode'] ?? 'walking'; // walking, driving, transit
 
@@ -213,10 +215,24 @@ if (!$queueData || !$queueData['inQueue']) {
     if ($aiPrediction && isset($aiPrediction['predictedWaitTime'])) {
         $estimatedWait = $aiPrediction['predictedWaitTime'];
         $aiConfidence = $aiPrediction['confidence'] ?? 'medium';
-        $aiModel = $aiPrediction['model']['name'] ?? 'neural_network';
+        $aiModel = $aiPrediction['model']['name'] ?? 'unknown';
 
         // تحديث وقت الانتظار في قاعدة البيانات
         $queueModel->updateEstimatedWaitTime($queueID, $estimatedWait);
+
+        //  إضافة الكود الجديد هنا لحفظ بيانات AI في الأعمدة الجديدة
+        $updateAIQuery = "UPDATE queue SET 
+                          ai_predicted_wait = :aiWait,
+                          ai_confidence = :confidence,
+                          ai_model = :model
+                          WHERE queueID = :queueID";
+
+        $updateAIStmt = $db->prepare($updateAIQuery);
+        $updateAIStmt->bindParam(':aiWait', $estimatedWait);
+        $updateAIStmt->bindParam(':confidence', $aiConfidence);
+        $updateAIStmt->bindParam(':model', $aiModel);
+        $updateAIStmt->bindParam(':queueID', $queueID);
+        $updateAIStmt->execute();
     } else {
         $estimatedWait = 15; // قيمة افتراضية
         $queueModel->updateEstimatedWaitTime($queueID, $estimatedWait);
@@ -256,8 +272,27 @@ if (!$queueData || !$queueData['inQueue']) {
     );
 
     if ($aiPrediction && isset($aiPrediction['predictedWaitTime'])) {
+
+        $estimatedWait = $aiPrediction['predictedWaitTime'];
+        $aiConfidence = $aiPrediction['confidence'] ?? 'medium';
+        $aiModel = $aiPrediction['model']['name'] ?? 'unknown';
+
         // تحديث وقت الانتظار باستخدام AI
         $queueModel->updateEstimatedWaitTime($queueData['queueID'], $aiPrediction['predictedWaitTime']);
+
+        // ✅ حفظ بيانات AI في قاعدة البيانات
+        $updateAIQuery = "UPDATE queue SET 
+                          ai_predicted_wait = :aiWait,
+                          ai_confidence = :confidence,
+                          ai_model = :model
+                          WHERE queueID = :queueID";
+
+        $updateAIStmt = $db->prepare($updateAIQuery);
+        $updateAIStmt->bindParam(':aiWait', $estimatedWait);
+        $updateAIStmt->bindParam(':confidence', $aiConfidence);
+        $updateAIStmt->bindParam(':model', $aiModel);
+        $updateAIStmt->bindParam(':queueID', $queueData['queueID']);
+        $updateAIStmt->execute();
 
         // إضافة توقعات AI إلى queueData
         $queueData['aiPredictedWait'] = $aiPrediction['predictedWaitTime'];
@@ -339,7 +374,7 @@ function getAIPrediction($doctorID, $position, $patientID)
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+
 
     if ($httpCode === 200 && $response) {
         $data = json_decode($response, true);

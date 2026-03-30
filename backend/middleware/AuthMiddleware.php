@@ -20,7 +20,9 @@ class AuthMiddleware
     public function validateToken($token)
     {
         try {
+            error_log("AuthMiddleware: Validating token");
             if (empty($token)) {
+                error_log("AuthMiddleware: Empty token");
                 return [
                     'success' => false,
                     'message' => 'No token provided'
@@ -29,9 +31,12 @@ class AuthMiddleware
 
             // إزالة "Bearer " إذا وجدت
             $token = str_replace('Bearer ', '', $token);
+            error_log("AuthMiddleware: Token after cleanup: " . substr($token, 0, 30) . "...");
+
 
             $parts = explode('.', $token);
             if (count($parts) !== 3) {
+                error_log("AuthMiddleware: Invalid token format - parts count: " . count($parts));
                 return [
                     'success' => false,
                     'message' => 'Invalid token format'
@@ -53,9 +58,20 @@ class AuthMiddleware
 
             // فك تشفير الـ payload
             $payload = json_decode(base64_decode($parts[1]), true);
+            error_log("AuthMiddleware: Token payload: " . json_encode($payload));
+
+            if (!$payload || !isset($payload['userID'])) {
+                error_log("AuthMiddleware: Invalid token payload - missing userID");
+                return [
+                    'success' => false,
+                    'message' => 'Invalid token payload'
+                ];
+            }
+
 
             // التحقق من انتهاء الصلاحية
             if (isset($payload['exp']) && $payload['exp'] < time()) {
+                error_log("AuthMiddleware: Token expired - exp: " . $payload['exp'] . ", now: " . time());
                 return [
                     'success' => false,
                     'message' => 'Token has expired'
@@ -65,14 +81,18 @@ class AuthMiddleware
             // التحقق من وجود المستخدم
             $user = $this->user->findByID($payload['userID']);
             if (!$user) {
+                error_log("AuthMiddleware: User not found for ID: " . $payload['userID']);
                 return [
                     'success' => false,
                     'message' => 'User not found'
                 ];
             }
 
+            error_log("AuthMiddleware: User found: " . $user['username']);
+
             // التحقق من حالة الحساب
             if (!$user['is_active']) {
+                error_log("AuthMiddleware: Account is inactive for user: " . $user['username']);
                 return [
                     'success' => false,
                     'message' => 'Account is inactive'
@@ -85,6 +105,7 @@ class AuthMiddleware
                 'payload' => $payload
             ];
         } catch (Exception $e) {
+            error_log("AuthMiddleware: Exception - " . $e->getMessage());
             return [
                 'success' => false,
                 'message' => 'Authentication failed: ' . $e->getMessage()
