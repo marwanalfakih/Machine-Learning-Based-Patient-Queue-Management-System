@@ -30,7 +30,7 @@ const Login = () => {
       console.error('Backend check failed:', err);
     }
   };
-
+ 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -85,12 +85,15 @@ const Login = () => {
       
       if (data.success) {
         console.log('Login successful! User data:', data.user);
+
+        console.log('User type is:', data.user.userType);
         
         // حفظ التوكن والمستخدم في localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
         // التوجيه بعد تأخير بسيط
+        /*
         setTimeout(() => {
           if (data.user.userType === 'patient') {
             navigate('/patient');
@@ -100,6 +103,14 @@ const Login = () => {
             navigate('/admin');
           }
         }, 100);
+        */
+        if (data.user.userType === 'patient') {
+          navigate('/patient', { replace: true });
+        }else if (data.user.userType === 'doctor') {
+          navigate('/doctor', { replace: true });
+        } else if (data.user.userType === 'admin') {
+          navigate('/admin', { replace: true });
+        }
         
       } else {
         console.log('Login failed:', data.error);

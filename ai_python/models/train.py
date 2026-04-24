@@ -1,332 +1,156 @@
 # ai_python/models/train.py
+
+import os
+import json
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
-import joblib 
+from sklearn.metrics import mean_absolute_error, r2_score
+from tabpfn_client import TabPFNRegressor, set_access_token
+import joblib
 
-import tensorflow as tf
-from tensorflow.keras import layers # type: ignore
+# =========================
+# CONFIGURATION
+# =========================
+API_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYmNmNDc5NGUtZmY0ZS00NWI4LTk1MzItZTc3YmU0YjA0MTExIiwiZXhwIjoxODA3ODM0MTM4fQ.WwSMPbSdmvE55TeyiTIPBR9XeMzV-cIr2C36-SOvBAE"
 
-import os
-import sys
-import json
+DATA_PATH = "ai_python/data/synthetic_data.csv"
+SAVE_DIR = "ai_python/saved_models"
 
-# إضافة المسار
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# ✅ الميزات الصحيحة (نستخدم queue_position ثم نحسب patients_ahead داخل الكود)
+FEATURES = [
+    'hour',              # الساعة الحالية (0-23)
+    'day_of_week',       # اليوم (0=Monday, 6=Sunday)
+    'is_weekend',        # هل هو عطلة نهاية الأسبوع؟
+    'is_peak_morning',   # ساعة الذروة الصباحية (9-11)
+    'is_peak_evening',   # ساعة الذروة المسائية (15-17)
+    'queue_position',    # موقع المريض في قائمة الانتظار (1,2,3...)
+    'total_patients',    # إجمالي المرضى في queue
+    'doctor_experience', # خبرة الدكتور بالسنوات
+    'distance_km',       # المسافة من المستشفى (كم) - من GPS
+    'eta_minutes',       # وقت الوصول المتوقع (دقائق) - من GPS
+    'speed_kmh'          # السرعة (كم/ساعة) - من GPS
+]
 
-# استيراد مولد البيانات
-try:
-    from data.generate_data import SyntheticDataGenerator
-    HAS_GENERATOR = True
-    print("✅ Successfully imported SyntheticDataGenerator")
-except ImportError as e:
-    HAS_GENERATOR = False
-    print(f"⚠️ Could not import SyntheticDataGenerator: {e}")
+TARGET = "waiting_time"
 
-class ModelTrainer:
-    """فئة موحدة لتدريب جميع نماذج AI"""
-    
-    def __init__(self):
-        self.models = {}
-        self.metrics = {}
-        self.feature_names = [
-            'hour', 'day_of_week', 'is_weekend', 
-            'is_peak_morning', 'is_peak_evening',
-            'queue_position', 'total_patients', 
-            'doctor_experience'
-        ]
-        self.save_dir = 'ai_python/saved_models'
-        
-    def load_data(self):
-        """تحميل أو توليد البيانات باستخدام SyntheticDataGenerator"""
-        data_path = 'data/synthetic_data.csv'
-        
-        # إذا كان الملف موجوداً، استخدمه
-        if os.path.exists(data_path):
-            print(f"✅ Loading existing data from {data_path}")
-            df = pd.read_csv(data_path)
-            print(f"   Loaded {len(df)} records")
-        else:
-            # إذا لم يكن الملف موجوداً، استخدم المولد
-            if HAS_GENERATOR:
-                print(f"📊 Generating new synthetic data...")
-                generator = SyntheticDataGenerator()
-                df = generator.generate(10000)
-                print(f"✅ Generated {len(df)} records")
-            else:
-                # إذا لم يكن المولد موجوداً، استخدم المولد الداخلي البسيط
-                print(f"⚠️ Using internal simple data generator")
-                df = self._generate_simple_data(5000)
-        
-        # التحقق من وجود جميع الأعمدة المطلوبة
-        missing_cols = [col for col in self.feature_names if col not in df.columns]
-        if missing_cols:
-            print(f"⚠️ Missing columns: {missing_cols}")
-            # إضافة الأعمدة المفقودة بقيم افتراضية
-            for col in missing_cols:
-                df[col] = 0
-        
-        # تجهيز الميزات
-        X = df[self.feature_names]
-        y = df['waiting_time'] if 'waiting_time' in df.columns else df.get('waiting_time', df.get('wait_time', None))
-        
-        if y is None:
-            raise ValueError("No target column (waiting_time) found in data")
-        
-        # تقسيم البيانات
-        X_train, X_temp, y_train, y_temp = train_test_split(
-            X, y, test_size=0.3, random_state=42
-        )
-        X_val, X_test, y_val, y_test = train_test_split(
-            X_temp, y_temp, test_size=0.5, random_state=42
-        )
-        
-        print(f"\n📊 Data split:")
-        print(f"  Training: {len(X_train)} samples")
-        print(f"  Validation: {len(X_val)} samples")
-        print(f"  Testing: {len(X_test)} samples")
-        
-        return X_train, X_val, X_test, y_train, y_val, y_test
-    
-    def _generate_simple_data(self, num_samples=5000):
-        """مولد بيانات بسيط احتياطي (إذا لم يكن المولد الأصلي متاحاً)"""
-        print(f"📊 Generating {num_samples} simple synthetic samples...")
-        
-        np.random.seed(42)
-        data = []
-        
-        for i in range(num_samples):
-            hour = np.random.randint(8, 20)
-            day = np.random.randint(0, 7)
-            position = np.random.randint(1, 20)
-            total = position + np.random.randint(5, 15)
-            exp = np.random.randint(1, 20)
-            
-            is_weekend = 1 if day >= 5 else 0
-            is_peak_morning = 1 if 9 <= hour <= 11 else 0
-            is_peak_evening = 1 if 15 <= hour <= 17 else 0
-            
-            # حساب وقت الانتظار
-            base = 15 * position
-            if is_peak_morning or is_peak_evening:
-                base *= 1.3
-            if is_weekend:
-                base *= 0.8
-            if day == 4:  # الخميس
-                base *= 1.2
-            
-            waiting_time = base + np.random.normal(0, 5)
-            waiting_time = max(5, waiting_time)
-            
-            data.append({
-                'hour': hour,
-                'day_of_week': day,
-                'is_weekend': is_weekend,
-                'is_peak_morning': is_peak_morning,
-                'is_peak_evening': is_peak_evening,
-                'queue_position': position,
-                'total_patients': total,
-                'doctor_experience': exp,
-                'waiting_time': waiting_time
-            })
-        
-        df = pd.DataFrame(data)
-        
-        # حفظ البيانات
-        os.makedirs('data', exist_ok=True)
-        df.to_csv('data/synthetic_data.csv', index=False)
-        print(f"✅ Saved simple data to data/synthetic_data.csv")
-        
-        return df
-    
-    def train_linear(self, X_train, y_train):
-        """تدريب نموذج Linear Regression"""
-        print("\n" + "="*40)
-        print("🧮 Training Linear Regression...")
-        
-        model = LinearRegression()
-        model.fit(X_train, y_train)
-        
-        self.models['linear'] = model
-        print("✅ Linear Regression trained")
-        return model
-    
-    def train_random_forest(self, X_train, y_train):
-        """تدريب نموذج Random Forest"""
-        print("\n" + "="*40)
-        print("🌲 Training Random Forest...")
-        
-        model = RandomForestRegressor(
-            n_estimators=100,
-            max_depth=15,
-            random_state=42,
-            n_jobs=-1,
-            verbose=0
-        )
-        model.fit(X_train, y_train)
-        
-        self.models['random_forest'] = model
-        print("✅ Random Forest trained")
-        
-        # أهمية الميزات
-        importance = pd.DataFrame({
-            'feature': self.feature_names,
-            'importance': model.feature_importances_
-        }).sort_values('importance', ascending=False)
-        
-        print("\n📈 Feature Importance:")
-        for _, row in importance.head(5).iterrows():
-            print(f"  {row['feature']}: {row['importance']:.3f}")
-        
-        return model
-    
-    def train_neural_network(self, X_train, y_train, X_val, y_val):
-        """تدريب نموذج Neural Network"""
-        print("\n" + "="*40)
-        print("🧠 Training Neural Network...")
-        
-        model = tf.keras.Sequential([ # type: ignore
-            tf.keras.Input(shape=(X_train.shape[1],)), # type: ignore
-            layers.Dense(64, activation='relu'),
-            layers.Dropout(0.2),
-            layers.Dense(32, activation='relu'),
-            layers.Dropout(0.2),
-            layers.Dense(16, activation='relu'),
-            layers.Dense(1)
-        ])
-        
-        model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), # type: ignore
-            loss='mse',
-            metrics=['mae']
-        )
-        
-        early_stop = tf.keras.callbacks.EarlyStopping( # type: ignore
-            monitor='val_loss',
-            patience=10,
-            restore_best_weights=True
-        )
-        
-        history = model.fit(
-            X_train, y_train,
-            validation_data=(X_val, y_val),
-            epochs=100,
-            batch_size=32,
-            callbacks=[early_stop],
-            verbose=0
-        )
-        
-        self.models['neural_network'] = model
-        print(f"✅ Neural Network trained ({len(history.history['loss'])} epochs)")
-        
-        return model, history
-    
-    def evaluate_models(self, X_test, y_test):
-        """تقييم جميع النماذج"""
-        print("\n" + "="*50)
-        print("📊 MODEL EVALUATION RESULTS")
-        print("="*50)
-        
-        results = {}
-        y_mean = y_test.mean()
-        
-        # تحويل إلى numpy
-        if hasattr(y_test, 'values'):
-            y_test_array = y_test.values
-        else:
-            y_test_array = np.array(y_test)
-        
-        for name, model in self.models.items():
-            # تنبؤ
-            y_pred = model.predict(X_test)
-            
-            if hasattr(y_pred, 'numpy'):
-                y_pred_array = y_pred.numpy().flatten()
-            else:
-                y_pred_array = np.array(y_pred).flatten()
-            
-            # مقاييس
-            mae = mean_absolute_error(y_test_array, y_pred_array)
-            rmse = np.sqrt(mean_squared_error(y_test_array, y_pred_array))
-            r2 = r2_score(y_test_array, y_pred_array)
-            accuracy = 100 - (mae / y_mean * 100)
-            
-            results[name] = {
-                'mae': round(float(mae), 2),
-                'rmse': round(float(rmse), 2),
-                'r2': round(float(r2), 3),
-                'accuracy': round(float(accuracy), 1)
-            }
-            
-            print(f"\n{name.upper()}:")
-            print(f"  MAE: {mae:.2f} minutes")
-            print(f"  RMSE: {rmse:.2f} minutes")
-            print(f"  R²: {r2:.3f}")
-            print(f"  Accuracy: {accuracy:.1f}%")
-        
-        self.metrics = results
-        return results
-    
-    def save_models(self):
-        """حفظ جميع النماذج"""
-        os.makedirs(self.save_dir, exist_ok=True)
-        print(f"\n💾 Saving models to {self.save_dir}/")
-        
-        for name, model in self.models.items():
-            if name == 'linear':
-                path = f'{self.save_dir}/linear.pkl'
-                joblib.dump(model, path)
-                print(f"  ✅ Saved linear.pkl")
-            
-            elif name == 'random_forest':
-                path = f'{self.save_dir}/random_forest.pkl'
-                joblib.dump(model, path)
-                print(f"  ✅ Saved random_forest.pkl")
-            
-            elif name == 'neural_network':
-                path = f'{self.save_dir}/neural_network.keras'
-                model.save(path)
-                print(f"  ✅ Saved neural_network.keras")
-         
-        # حفظ metrics
-        metrics_path = f'{self.save_dir}/metrics.json'
-        with open(metrics_path, 'w') as f:
-            json.dump(self.metrics, f, indent=2)
-        print(f"  ✅ Saved metrics.json")
-    
-    def run_training(self):
-        """تشغيل التدريب الكامل"""
-        print("\n" + "="*60)
-        print("🚀 AI MODEL TRAINING PIPELINE")
-        print("="*60)
-        
-        # تحميل البيانات
-        X_train, X_val, X_test, y_train, y_val, y_test = self.load_data()
-        
-        # تدريب النماذج
-        self.train_linear(X_train, y_train)
-        self.train_random_forest(X_train, y_train)
-        self.train_neural_network(X_train, y_train, X_val, y_val)
-        
-        # تقييم
-        results = self.evaluate_models(X_test, y_test)
-        
-        # حفظ
-        self.save_models()
-        
-        # النموذج الأفضل
-        best_model = max(results.items(), key=lambda x: x[1]['accuracy'])
-        print("\n" + "="*50)
-        print(f"🏆 BEST MODEL: {best_model[0].upper()}")
-        print(f"   Accuracy: {best_model[1]['accuracy']}%")
-        print(f"   MAE: {best_model[1]['mae']} minutes")
-        print("="*50)
-        
-        return results
+os.makedirs(SAVE_DIR, exist_ok=True)
 
-if __name__ == '__main__':
-    trainer = ModelTrainer()
-    trainer.run_training()
+# =========================
+# AUTHENTICATION
+# =========================
+print("🔐 Authenticating with TabPFN Cloud...")
+set_access_token(API_TOKEN)
+print("✅ Authentication successful!")
+
+# =========================
+# LOAD DATA
+# =========================
+print(f"\n📂 Loading data from: {DATA_PATH}")
+df = pd.read_csv(DATA_PATH)
+
+# ✅ إضافة عمود patients_ahead (محسوب من queue_position)
+df['patients_ahead'] = df['queue_position'] - 1
+print(f"✅ Added 'patients_ahead' column (calculated from queue_position)")
+
+# التحقق من وجود جميع الأعمدة المطلوبة
+missing_cols = [c for c in FEATURES if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"Missing columns: {missing_cols}")
+
+print(f"✅ Loaded {len(df)} records")
+print(f"📊 Features: {FEATURES}")
+print(f"📊 Added feature: patients_ahead = queue_position - 1")
+print(f"🎯 Target: {TARGET}")
+
+# عرض عينة من البيانات
+print("\n📋 Sample data:")
+print(df[FEATURES + ['patients_ahead', TARGET]].head(10))
+
+# =========================
+# PREPARE DATA
+# =========================
+# ✅ نستخدم patients_ahead بدلاً من queue_position للتدريب
+X = df[['hour', 'day_of_week', 'is_weekend', 'is_peak_morning', 'is_peak_evening',
+        'patients_ahead', 'total_patients', 'doctor_experience',
+        'distance_km', 'eta_minutes', 'speed_kmh']].values
+
+y = df[TARGET].values
+
+# تقسيم البيانات
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42
+)
+
+print(f"\n📊 Data split:")
+print(f"   Training: {len(X_train)} samples")
+print(f"   Testing: {len(X_test)} samples")
+print(f"   Features shape: {X_train.shape}")
+
+# =========================
+# TRAIN TABPFN MODEL
+# =========================
+print("\n🧠 Training TabPFN Regressor...")
+model = TabPFNRegressor()
+model.fit(X_train, y_train)
+print("✅ Model training completed!")
+
+# =========================
+# EVALUATE MODEL
+# =========================
+print("\n📈 Evaluating model on test data...")
+y_pred = model.predict(X_test)
+
+mae = mean_absolute_error(y_test, y_pred)
+rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
+r2 = r2_score(y_test, y_pred)
+accuracy = 100 - (mae / y_test.mean() * 100)
+
+metrics = {
+    "model": "tabpfn",
+    "mae": round(float(mae), 2),
+    "rmse": round(float(rmse), 2),
+    "r2": round(float(r2), 3),
+    "accuracy": round(float(accuracy), 1),
+    "samples": len(X_train),
+    "features_used": ['hour', 'day_of_week', 'is_weekend', 'is_peak_morning', 
+                      'is_peak_evening', 'patients_ahead', 'total_patients',
+                      'doctor_experience', 'distance_km', 'eta_minutes', 'speed_kmh']
+}
+
+print(f"\n📊 Model Performance:")
+print(f"   MAE: {metrics['mae']} minutes")
+print(f"   RMSE: {metrics['rmse']} minutes")
+print(f"   R²: {metrics['r2']}")
+print(f"   Accuracy: {metrics['accuracy']}%")
+
+# =========================
+# SAVE MODEL & METADATA
+# =========================
+print(f"\n💾 Saving model to: {SAVE_DIR}")
+
+# حفظ النموذج
+model_path = os.path.join(SAVE_DIR, 'tabpfn_queue.pkl')
+joblib.dump(model, model_path)
+print(f"   ✅ Saved: tabpfn_queue.pkl")
+
+# ✅ حفظ أسماء الميزات (مع patients_ahead)
+features_list = ['hour', 'day_of_week', 'is_weekend', 'is_peak_morning', 
+                 'is_peak_evening', 'patients_ahead', 'total_patients',
+                 'doctor_experience', 'distance_km', 'eta_minutes', 'speed_kmh']
+
+features_path = os.path.join(SAVE_DIR, 'features.json')
+with open(features_path, 'w') as f:
+    json.dump(features_list, f, indent=2)
+print(f"   ✅ Saved: features.json (with patients_ahead)")
+
+# حفظ مقاييس الأداء
+metrics_path = os.path.join(SAVE_DIR, 'metrics.json')
+with open(metrics_path, 'w') as f:
+    json.dump(metrics, f, indent=2)
+print(f"   ✅ Saved: metrics.json")
+
+print("\n" + "="*50)
+print("🎉 TRAINING COMPLETED SUCCESSFULLY!")
+print("="*50)
+print(f"Model ready for production at: {model_path}")
