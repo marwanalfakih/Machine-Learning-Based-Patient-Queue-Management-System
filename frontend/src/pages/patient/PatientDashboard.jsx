@@ -213,7 +213,7 @@ useEffect(() => {
         upcomingAppointments.sort((a, b) => new Date(a.appointmentDate) - new Date(b.appointmentDate));
         
         setAppointments(upcomingAppointments);
-        console.log('✅ Upcoming appointments:', upcomingAppointments);
+        console.log(' Upcoming appointments:', upcomingAppointments);
       }
        else {
         console.warn('Failed to load appointments:', data.error);
@@ -225,23 +225,142 @@ useEffect(() => {
     }
   };
 
-  const fetchQueueData = async (patientID) => {
-    console.log('🟡 Fetching queue data for patient:', patientID);
+  // الحصول على موعد اليوم
+  const getTodaysAppointment = () => {
+    if (!appointments || appointments.length === 0) return null;
+    
+    //const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA');
+
+    return appointments.find(app => {
+      //const appDate = new Date(app.appointmentDate).toISOString().split('T')[0];
+      const appDate = new Date(app.appointmentDate).toLocaleDateString('en-CA');
+      return appDate === today;
+    });
+  };
+
+    // ========== GPS Check-In Functions ==========
+  const handleGPSCheckIn = async (locationData) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/patient/queue.php?patientID=${patientID}`, {
+      setGpsStatus('checking');
+      
+      const response = await fetch('http://localhost:8000/api/gps/checkin.php', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(locationData)
+      });
+
+      const data = await response.json();
+
+      console.log('=== GPS CHECK-IN RESPONSE ===');
+      console.log('Full response:', data);
+      console.log('Success:', data.success);
+      console.log('Data:', data.data);
+      console.log('Location:', data.data?.location);
+
+
+      if (data.success) {
+        // تحديث بيانات قائمة الانتظار
+        setQueueData(data.data);
+        setGpsStatus('success');
+        
+        // حفظ بيانات الموقع للخريطة - مع التحقق من وجود البيانات
+        if (data.data && data.data.location) {
+          console.log('Setting location data for map:', data.data.location);
+          setLocationData({
+            patientLocation: {
+              lat: data.data.location.patientLat,
+              lng: data.data.location.patientLng
+            },
+            hospitalLocation: {
+              lat: data.data.location.hospitalLat,
+              lng: data.data.location.hospitalLng
+            },
+            distance: data.data.distance,
+            estimatedTime: data.data.estimatedArrivalTime || 'Calculating...'
+          });
+
+          // عرض الخريطة بعد 1 ثانية
+          setTimeout(() => {
+            setShowMap(true);
+          }, 1000);
+        } else {
+          console.warn('No location data in response');
+        }
+
+        // عرض إشعار نجاح
+        showNotificationMessage('success', `Check-in successful! Your position: #${data.data?.position || 'N/A'}`);
+        
+        // إضافة نشاط جديد
+        const newActivity = {
+          id: Date.now(),
+          type: 'checkin',
+          description: `Checked in via GPS • Position #${data.data?.position || 'N/A'}`,
+          time: 'Just now',
+          icon: 'fa-map-marker-alt'
+        };
+        setActivities(prev => [newActivity, ...prev.slice(0, 9)]);
+        
+        // إعادة جلب بيانات قائمة الانتظار بعد 2 ثانية للتحديث
+        setTimeout(() => {
+          if (patientData?.patientID) {
+            fetchQueueData(patientData.patientID);
+        }
+        }, 2000);
+        
+      } else {
+        setGpsStatus('error');
+
+        if (data.location) {
+          // إذا كان هناك بيانات موقع حتى لو فشل check-in
+          setLocationData({
+            patientLocation: {
+              lat: data.location.latitude,
+              lng: data.location.longitude
+            },
+            hospitalLocation: {
+              lat: data.location.hospitalLocation.lat,
+              lng: data.location.hospitalLocation.lng
+            },
+            distance: data.location.distance,
+            estimatedTime: data.location.estimatedTime?.formatted || 'Unknown'
+          });
+          setShowMap(true);
+        }
+        
+        if (data.distance) {
+          showNotificationMessage('error', `You are ${data.distance}m away from the hospital. Please move closer.`);
+        } else {
+          showNotificationMessage('error', data.error || 'Check-in failed');
+        }
+      }
+    } catch (error) {
+      console.error('GPS Check-in error:', error);
+      setGpsStatus('error');
+      showNotificationMessage('error', 'Network error. Please try again.');
+    }
+  };
+
+  const fetchQueueData = async (patientID) => {
+    console.log('Fetching queue data for patient:', patientID);
+
+    let url = `http://localhost:8000/api/patient/queue.php?patientID=${patientID}`;
+    console.log('Fetching URL:', url); 
+    try {
+      const response = await fetch(url, {
         method: 'GET',
         headers: getAuthHeaders()
       });
 
       const data = await response.json();
-      console.log('🟢 Queue API Response:', data);
+      console.log('Queue API Response:', data);
 
       if (response.ok && data.success) {
-        console.log('✅ Queue data received:', data.queue);
+        console.log('Queue data received:', data.queue);
         setQueueData(data.queue);
         console.log('Queue data loaded:', data.queue);
       } else {
-        console.warn('⚠️No queue data available');
+        console.warn('No queue data available');
         setQueueData(null);
       }
     } catch (error) {
@@ -249,6 +368,43 @@ useEffect(() => {
       setQueueData(null);
     }
   };
+  
+
+   /*const fetchQueueData = async (patientID, gpsData = null) => {
+      console.log('Fetching queue data for patient:', patientID);
+      
+      let url = `http://localhost:8000/api/patient/queue_ai.php?patientID=${patientID}`;
+      
+      // ✅ فقط نمرر إحداثيات GPS كما هي (لا نحسب مسافة)
+      if (gpsData && gpsData.latitude && gpsData.longitude) {
+          url += `&use_ai=true&lat=${gpsData.latitude}&lng=${gpsData.longitude}`;
+          console.log('🤖 Sending GPS coordinates to AI:', gpsData.latitude, gpsData.longitude);
+      } else {
+          url += `&use_ai=false`;
+      }
+      
+      try {
+          const response = await fetch(url, {
+              method: 'GET',
+              headers: getAuthHeaders()
+          });
+
+          const data = await response.json();
+          console.log('Queue API Response:', data);
+
+          if (response.ok && data.success) {
+              setQueueData(data.queue);
+              if (data.queue.ai_enabled) {
+                  console.log('🤖 AI Prediction:', data.queue.ai_prediction);
+              }
+          } else {
+              setQueueData(null);
+          }
+      } catch (error) {
+          console.error('Error fetching queue data:', error);
+          setQueueData(null);
+      }
+  };*/
 
   const fetchRecentActivities = async (patientID) => {
     try {
@@ -271,6 +427,7 @@ useEffect(() => {
       setActivities([]);
     }
   };
+
 
   // جلب معلومات نماذج AI
   const fetchAIModels = async () => {
@@ -324,106 +481,7 @@ useEffect(() => {
 }, []);
 
   
-  // ========== GPS Check-In Functions ==========
-  const handleGPSCheckIn = async (locationData) => {
-    try {
-      setGpsStatus('checking');
-      
-      const response = await fetch('http://localhost:8000/api/gps/checkin.php', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(locationData)
-      });
 
-      const data = await response.json();
-      console.log('=== GPS CHECK-IN RESPONSE ===');
-      console.log('Full response:', data);
-      console.log('Success:', data.success);
-      console.log('Data:', data.data);
-      console.log('Location:', data.data?.location);
-
-
-      if (data.success) {
-        // تحديث بيانات قائمة الانتظار
-        setQueueData(data.data);
-        setGpsStatus('success');
-        
-        // حفظ بيانات الموقع للخريطة - مع التحقق من وجود البيانات
-        if (data.data && data.data.location) {
-          console.log('Setting location data for map:', data.data.location);
-          setLocationData({
-            patientLocation: {
-              lat: data.data.location.patientLat,
-              lng: data.data.location.patientLng
-            },
-            hospitalLocation: {
-              lat: data.data.location.hospitalLat,
-              lng: data.data.location.hospitalLng
-            },
-            distance: data.data.distance,
-            estimatedTime: data.data.estimatedArrivalTime || 'Calculating...'
-          });
-
-          // عرض الخريطة بعد 1 ثانية
-          setTimeout(() => {
-            setShowMap(true);
-          }, 1000);
-        } else {
-          console.warn('No location data in response');
-        }
-
-        // عرض إشعار نجاح
-        showNotificationMessage('success', `✅ Check-in successful! Your position: #${data.data?.position || 'N/A'}`);
-        
-        // إضافة نشاط جديد
-        const newActivity = {
-          id: Date.now(),
-          type: 'checkin',
-          description: `Checked in via GPS • Position #${data.data?.position || 'N/A'}`,
-          time: 'Just now',
-          icon: 'fa-map-marker-alt'
-        };
-        setActivities(prev => [newActivity, ...prev.slice(0, 9)]);
-        
-        // إعادة جلب بيانات قائمة الانتظار بعد 2 ثانية للتحديث
-        setTimeout(() => {
-          if (patientData?.patientID) {
-            fetchQueueData(patientData.patientID);
-        }
-        }, 2000);
-        
-      } else {
-        setGpsStatus('error');
-
-        if (data.location) {
-          // إذا كان هناك بيانات موقع حتى لو فشل check-in
-          setLocationData({
-            patientLocation: {
-              lat: data.location.latitude,
-              lng: data.location.longitude
-            },
-            hospitalLocation: {
-              lat: data.location.hospitalLocation.lat,
-              lng: data.location.hospitalLocation.lng
-            },
-            distance: data.location.distance,
-            estimatedTime: data.location.estimatedTime?.formatted || 'Unknown'
-          });
-          setShowMap(true);
-        }
-        
-        if (data.distance) {
-          showNotificationMessage('error', `You are ${data.distance}m away from the hospital. Please move closer.`);
-        } else {
-          showNotificationMessage('error', data.error || 'Check-in failed');
-        }
-      }
-    } catch (error) {
-      console.error('GPS Check-in error:', error);
-      setGpsStatus('error');
-      showNotificationMessage('error', 'Network error. Please try again.');
-    }
-  };
 
   const showNotificationMessage = (type, message) => {
     setNotificationType(type || 'info');
@@ -440,19 +498,7 @@ useEffect(() => {
     setShowNotification(false);
   };
 
-  // الحصول على موعد اليوم
-  const getTodaysAppointment = () => {
-    if (!appointments || appointments.length === 0) return null;
-    
-    //const today = new Date().toISOString().split('T')[0];
-    const today = new Date().toLocaleDateString('en-CA');
-
-    return appointments.find(app => {
-      //const appDate = new Date(app.appointmentDate).toISOString().split('T')[0];
-      const appDate = new Date(app.appointmentDate).toLocaleDateString('en-CA');
-      return appDate === today;
-    });
-  };
+  
 
   // معالجة تسجيل الخروج
   const handleLogout = () => {
@@ -1051,7 +1097,7 @@ const DashboardContent = ({
               onCheckIn={onGPSCheckIn}
               disabled={!todaysAppointment}
               gpsStatus={gpsStatus}
-              hasCheckedIn={hasCheckedIn}  // ✅ تمرير القيمة الجديدة
+              hasCheckedIn={hasCheckedIn}  
             />
           </div>
         </div>

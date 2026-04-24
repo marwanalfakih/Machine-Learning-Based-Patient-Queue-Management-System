@@ -1,127 +1,98 @@
 # ai_python/app.py
-# ai_python/app.py
 from flask import Flask, request, jsonify
-from flask_cors import CORS 
+from flask_cors import CORS
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
-import os
 
-# إعداد التسجيل
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:3000"])
 
-# ========== استيراد predictor ==========
-from models.predictor import AIPredictor  # ✅ المسار الصحيح
+# ========== استيراد النموذج ==========
+from models.predictor import AIPredictor
 
-predictor = AIPredictor(models_dir='ai_python/saved_models')
-predictor.load_models()
+# ✅ إنشاء وتحميل النموذج
+predictor = AIPredictor()
+model_loaded = predictor.load_model()
 
+if not model_loaded:
+    logger.warning("⚠️ Model not loaded! Predictions will use fallback only.")
+
+# ========== ENDPOINT: التنبؤ ==========
 @app.route('/api/predict', methods=['POST'])
 def predict():
-    """التنبؤ بوقت الانتظار"""
     try:
         data = request.json
-        position = int(data.get('queuePosition', 1))  # ✅ استخدام int
-        doctor_id = data.get('doctorID')
+        logger.info(f"📊 Prediction request: {data}")
         
-        # ✅ استخدام الدالة بشكل صحيح
-        result = predictor.predict(queue_position=position, doctor_id=doctor_id)
+        # استخراج البيانات
+        distance_km = float(data.get('distance_km', 0))
+        eta_minutes = float(data.get('eta_minutes', 0))
+        total_patients = int(data.get('total_patients', 1))
+        patients_ahead = int(data.get('patients_ahead', 0))
+        doctor_experience = int(data.get('doctor_experience', 5))
         
-        if not result['success']:
-            return jsonify({'success': False, 'error': result.get('error', 'Prediction failed')}), 500
+        current_hour = datetime.now().hour
+        current_day = datetime.now().weekday()
+        
+        # ✅ استخدام النموذج إذا كان محملاً
+        if predictor.is_loaded and predictor.model is not None:
+            result = predictor.predict(
+                patients_ahead=patients_ahead,
+                total_patients=total_patients,
+                doctor_experience=doctor_experience,
+                distance_km=distance_km,
+                eta_minutes=eta_minutes,
+                current_hour=current_hour,
+                current_day=current_day
+            )
+            
+            if result['success']:
+                return jsonify({
+                    'success': True,
+                    'predictedWaitTime': result['predicted_time'],
+                    'clinicWaitTime': result['clinic_wait_time'],
+                    'confidence': 'high',
+                    'accuracy': result.get('model_accuracy', 85)
+                })
+        
+        # ✅ Fallback (إذا فشل النموذج)
+        is_peak = 1 if (9 <= current_hour <= 11 or 15 <= current_hour <= 17) else 0
+        base = 20 if is_peak else 15
+        clinic_wait = patients_ahead * base
+        total_wait = clinic_wait + eta_minutes
         
         return jsonify({
             'success': True,
-            'predictedWaitTime': round(result['predicted_time'], 1),
-            'confidence': result['confidence'],
-            'model': {
-                'name': result['model_used'],
-                'accuracy': result['accuracy']
-            }
+            'predictedWaitTime': round(total_wait, 1),
+            'clinicWaitTime': round(clinic_wait, 1),
+            'confidence': 'medium',
+            'accuracy': 70
         })
         
     except Exception as e:
         logger.error(f"Prediction error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/congestion', methods=['GET'])
-def predict_congestion():
-    """التنبؤ بالازدحام"""
-    try:
-        hours = int(request.args.get('hours', 6))
-        predictions = []
-        
-        current_hour = datetime.now().hour
-        current_day = datetime.now().weekday()
-        
-        for i in range(hours):
-            target_hour = (current_hour + i) % 24
-            target_day = current_day
-            
-            # تعديل اليوم إذا تعدى منتصف الليل
-            if current_hour + i >= 24:
-                target_day = (current_day + 1) % 7
-            
-            # تنبؤ معقول
-            if 9 <= target_hour <= 11 or 15 <= target_hour <= 17:
-                if target_day < 5:  # أيام العمل
-                    predicted_patients = np.random.randint(15, 25)
-                    predicted_wait = np.random.randint(20, 35)
-                    level = 'High'
-                else:  # نهاية الأسبوع
-                    predicted_patients = np.random.randint(8, 15)
-                    predicted_wait = np.random.randint(15, 25)
-                    level = 'Medium'
-            else:
-                predicted_patients = np.random.randint(5, 12)
-                predicted_wait = np.random.randint(10, 20)
-                level = 'Low'
-            
-            predictions.append({
-                'hour': target_hour,
-                'day': target_day,
-                'day_name': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][target_day],
-                'predictedPatients': predicted_patients,
-                'predictedWaitTime': predicted_wait,
-                'congestionLevel': level,
-                'timestamp': (datetime.now() + timedelta(hours=i)).isoformat()
-            })
-        
-        return jsonify({
-            'success': True,
-            'predictions': predictions,
-            'model_used': 'statistical'
-        })
-        
-    except Exception as e:
-        logger.error(f"Congestion prediction error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/models', methods=['GET'])
-def get_models():
-    """الحصول على معلومات النماذج"""
-    models_list = predictor.get_models_info()  # ✅ اسم الدالة الصحيح
-    
-    return jsonify({
-        'success': True,
-        'models': models_list,
-        'total': len(models_list)
-    })
-
 @app.route('/api/health', methods=['GET'])
 def health():
-    """فحص صحة الخدمة"""
-    models_info = predictor.get_models_info()
     return jsonify({
         'status': 'healthy',
-        'models_loaded': len(models_info),
-        'models': [m['name'] for m in models_info],
+        'model_loaded': predictor.is_loaded,
         'timestamp': datetime.now().isoformat()
     })
 
 if __name__ == '__main__':
+    print("\n" + "="*50)
+    print("🚀 AI Prediction Service")
+    print("="*50)
+    print(f"Model loaded: {predictor.is_loaded}")
+    if predictor.is_loaded and predictor.metrics:
+        print(f"Model accuracy: {predictor.metrics.get('accuracy', 'N/A')}%")
+    print("Server: http://localhost:5001")
+    print("="*50 + "\n")
+    
     app.run(host='0.0.0.0', port=5001, debug=True)

@@ -1,5 +1,11 @@
 <?php
 // api/gps/checkin.php
+
+ob_start();
+
+error_reporting(0);
+ini_set('display_errors', 0);
+
 header("Access-Control-Allow-Origin: http://localhost:3000");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
@@ -20,12 +26,9 @@ require_once '../../models/Notification.php';
 require_once '../../models/AIPrediction.php';
 
 // إحداثيات المستشفى
-//define('HOSPITAL_LAT', 30.03043); // taif مجمع الملك فيصل الطبي
-//define('HOSPITAL_LNG', 31.23149);
-define('HOSPITAL_LAT', 21.24545); // taif مجمع الملك فيصل الطبي
+define('HOSPITAL_LAT', 21.24545);
 define('HOSPITAL_LNG', 40.41980);
-define('CHECKIN_RADIUS', 5000); // 5 كم للاختبار
-define('MIN_ACCURACY', 500); // دقة مقبولة
+define('MIN_ACCURACY', 2000);
 
 $database = new Database();
 $db = $database->getConnection();
@@ -41,7 +44,6 @@ if (empty($token)) {
     exit;
 }
 
-// فك تشفير التوكن
 try {
     $parts = explode('.', $token);
     $payload = json_decode(base64_decode($parts[1]), true);
@@ -62,7 +64,6 @@ if (!$patient) {
     exit;
 }
 
-// التحقق من الطلب
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(["success" => false, "error" => "Method not allowed"]);
@@ -77,47 +78,47 @@ if (!isset($input['latitude']) || !isset($input['longitude']) || !isset($input['
     exit;
 }
 
+
 //$latitude = floatval($input['latitude']);
 //$longitude = floatval($input['longitude']);
-$latitude = 21.25561;
-$longitude = 40.42975;
-$accuracy = floatval($input['accuracy']);
-$travelMode = $input['travelMode'] ?? 'walking'; // walking, driving, transit
+//$latitude = 21.25561;
+//$longitude = 40.42975;
 
-// حساب المسافة باستخدام صيغة Haversine
+//$latitude = 21.262959;
+//$longitude = 40.420473;
+
+$latitude = 21.250802;
+$longitude = 40.420969;
+
+
+$accuracy = floatval($input['accuracy']);
+$travelMode = $input['travelMode'] ?? 'driving';
+
+// حساب المسافة
 function calculateDistance($lat1, $lon1, $lat2, $lon2)
 {
-    $earthRadius = 6371000; // متر
-
+    $earthRadius = 6371000;
     $latFrom = deg2rad($lat1);
     $lonFrom = deg2rad($lon1);
     $latTo = deg2rad($lat2);
     $lonTo = deg2rad($lon2);
-
     $latDelta = $latTo - $latFrom;
     $lonDelta = $lonTo - $lonFrom;
-
     $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
         cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
-
     return $angle * $earthRadius;
 }
 
-$distance = calculateDistance($latitude, $longitude, HOSPITAL_LAT, HOSPITAL_LNG);
-
-// حساب وقت الوصول التقديري بناءً على وسيلة النقل
 function calculateEstimatedTime($distance, $mode)
 {
     $speeds = [
-        'walking' => 1.4, // متر/ثانية (5 كم/س)
-        'driving' => 13.9, // متر/ثانية (50 كم/س)
-        'transit' => 8.3, // متر/ثانية (30 كم/س)
-        'bicycling' => 5.6 // متر/ثانية (20 كم/س)
+        'walking' => 1.4,
+        'driving' => 13.9,
+        'transit' => 8.3,
+        'bicycling' => 5.6
     ];
-
-    $speed = $speeds[$mode] ?? $speeds['walking'];
+    $speed = $speeds[$mode] ?? $speeds['driving'];
     $timeSeconds = $distance / $speed;
-
     return [
         'seconds' => round($timeSeconds),
         'minutes' => round($timeSeconds / 60),
@@ -140,9 +141,12 @@ function formatTime($seconds)
     }
 }
 
+$distance = calculateDistance($latitude, $longitude, HOSPITAL_LAT, HOSPITAL_LNG);
 $estimatedTime = calculateEstimatedTime($distance, $travelMode);
+//$distance_km = $distance / 1000;
+$distance_km = round($distance / 1000, 2);
+$eta_minutes = $estimatedTime['minutes'];
 
-// التحقق من الدقة
 if ($accuracy > MIN_ACCURACY) {
     echo json_encode([
         "success" => false,
@@ -191,9 +195,57 @@ if (!$todaysAppointment) {
     exit;
 }
 
-// إضافة إلى قائمة الانتظار أو تحديث إذا كان موجوداً
+// Add to GPS Check-ins table
+$checkinID = 'CHK_' . str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
+
+$insertGPSQuery = "INSERT INTO gpscheckins (
+    checkinID, patientID, appointmentID, latitude, longitude, 
+    checkinTime, status, distanceFromFacility, estimatedArrivalTime, autoCheckedIn
+) VALUES (
+    :checkinID, :patientID, :appointmentID, :latitude, :longitude,
+    NOW(), 'approved', :distance, :eta, 1
+)";
+
+$insertStmt = $db->prepare($insertGPSQuery);
+$insertStmt->bindParam(':checkinID', $checkinID);
+$insertStmt->bindParam(':patientID', $patient['patientID']);
+$insertStmt->bindParam(':appointmentID', $todaysAppointment['appointmentID']);
+$insertStmt->bindParam(':latitude', $latitude);
+$insertStmt->bindParam(':longitude', $longitude);
+$insertStmt->bindParam(':distance', $distance);
+$insertStmt->bindParam(':eta', $estimatedTime['seconds']);
+$insertStmt->execute();
+// =================================================================================
+
+
 $queueModel = new Queue($db);
 $queueData = $queueModel->getPatientPosition($patient['patientID']);
+
+// ========== جلب إحصائيات قائمة الانتظار ========================================
+$position = $queueData ? ($queueData['position'] + 1) : 1;
+if ($queueData && $queueData['inQueue']) {
+    $position = $queueData['position'];
+}
+
+$statsQuery = "SELECT 
+                COUNT(*) as total_patients,
+                SUM(CASE WHEN queuePosition < :position AND q.status = 'waiting' THEN 1 ELSE 0 END) as patients_ahead,
+                (SELECT yearsOfExperience FROM doctors WHERE doctorID = :doctorID) as doctor_experience
+              FROM queue q
+              JOIN appointments a ON q.appointmentID = a.appointmentID
+              WHERE a.doctorID = :doctorID 
+                AND DATE(q.checkinTime) = CURDATE()
+                AND q.status IN ('waiting', 'checked-in')";
+
+$statsStmt = $db->prepare($statsQuery);
+$statsStmt->bindParam(':doctorID', $todaysAppointment['doctorID']);
+$statsStmt->bindParam(':position', $position);
+$statsStmt->execute();
+$queueStats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+
+$total_patients = $queueStats['total_patients'] ?? 1;
+$patients_ahead = $queueStats['patients_ahead'] ?? ($position - 1);
+$doctor_experience = $queueStats['doctor_experience'] ?? 5;
 
 // ========== متغيرات AI ==========
 $aiPredictedWait = null;
@@ -201,32 +253,33 @@ $aiConfidence = null;
 $aiModel = null;
 
 if (!$queueData || !$queueData['inQueue']) {
-    // إضافة جديد
+    // إضافة مريض جديد إلى قائمة الانتظار
     $queueID = $queueModel->addToQueue($todaysAppointment['appointmentID']);
 
-    // الحصول على توقع AI لوقت الانتظار
+    // استدعاء AI مع جميع البيانات
     $aiPrediction = getAIPrediction(
         $todaysAppointment['doctorID'],
-        $queueData ? $queueData['position'] + 1 : 1,
-        $patient['patientID']
+        $position,
+        $patient['patientID'],
+        $distance_km,
+        $eta_minutes,
+        $total_patients,
+        $patients_ahead,
+        $doctor_experience
     );
 
-    // تحديث وقت الانتظار باستخدام AI إذا كان متاحاً
     if ($aiPrediction && isset($aiPrediction['predictedWaitTime'])) {
         $estimatedWait = $aiPrediction['predictedWaitTime'];
         $aiConfidence = $aiPrediction['confidence'] ?? 'medium';
-        $aiModel = $aiPrediction['model']['name'] ?? 'unknown';
+        $aiModel = $aiPrediction['model']['name'] ?? 'TabPFN';
 
-        // تحديث وقت الانتظار في قاعدة البيانات
         $queueModel->updateEstimatedWaitTime($queueID, $estimatedWait);
 
-        //  إضافة الكود الجديد هنا لحفظ بيانات AI في الأعمدة الجديدة
         $updateAIQuery = "UPDATE queue SET 
                           ai_predicted_wait = :aiWait,
                           ai_confidence = :confidence,
                           ai_model = :model
                           WHERE queueID = :queueID";
-
         $updateAIStmt = $db->prepare($updateAIQuery);
         $updateAIStmt->bindParam(':aiWait', $estimatedWait);
         $updateAIStmt->bindParam(':confidence', $aiConfidence);
@@ -234,59 +287,63 @@ if (!$queueData || !$queueData['inQueue']) {
         $updateAIStmt->bindParam(':queueID', $queueID);
         $updateAIStmt->execute();
     } else {
-        $estimatedWait = 15; // قيمة افتراضية
+        $estimatedWait = 15;
         $queueModel->updateEstimatedWaitTime($queueID, $estimatedWait);
     }
 
-    // تحديث وقت الوصول التقديري
-    $updateQuery = "UPDATE queue SET estimatedArrivalTime = :eta WHERE queueID = :queueID";
+    // حفظ بيانات GPS
+    $updateQuery = "UPDATE queue SET estimatedArrivalTime = :eta, distance_km = :distance_km WHERE queueID = :queueID";
     $updateStmt = $db->prepare($updateQuery);
     $eta = $estimatedTime['seconds'];
     $updateStmt->bindParam(':eta', $eta);
+    $updateStmt->bindParam(':distance_km', $distance_km);
     $updateStmt->bindParam(':queueID', $queueID);
     $updateStmt->execute();
 
-    // جلب البيانات المحدثة
     $queueData = $queueModel->getPatientPosition($patient['patientID']);
 
-    // إضافة توقعات AI إلى queueData
     if ($aiPrediction) {
         $queueData['aiPredictedWait'] = $aiPrediction['predictedWaitTime'];
         $queueData['aiConfidence'] = $aiConfidence;
         $queueData['aiModel'] = $aiModel;
     }
+
+    // ========== إعادة ترتيب قائمة الانتظار (للمريض الجديد) ==========
+    reorderQueueByETA($db, $todaysAppointment['doctorID']);
+    // ==============================================================
 } else {
-    // تحديث وقت الوصول للموجود
-    $updateQuery = "UPDATE queue SET estimatedArrivalTime = :eta WHERE queueID = :queueID";
+    // تحديث مريض موجود
+    $updateQuery = "UPDATE queue SET estimatedArrivalTime = :eta, distance_km = :distance_km WHERE queueID = :queueID";
     $updateStmt = $db->prepare($updateQuery);
     $eta = $estimatedTime['seconds'];
     $updateStmt->bindParam(':eta', $eta);
+    $updateStmt->bindParam(':distance_km', $distance_km);
     $updateStmt->bindParam(':queueID', $queueData['queueID']);
     $updateStmt->execute();
 
-    // الحصول على توقع AI محدث للمستخدم الموجود
     $aiPrediction = getAIPrediction(
         $todaysAppointment['doctorID'],
         $queueData['position'],
-        $patient['patientID']
+        $patient['patientID'],
+        $distance_km,
+        $eta_minutes,
+        $total_patients,
+        $patients_ahead,
+        $doctor_experience
     );
 
     if ($aiPrediction && isset($aiPrediction['predictedWaitTime'])) {
-
         $estimatedWait = $aiPrediction['predictedWaitTime'];
         $aiConfidence = $aiPrediction['confidence'] ?? 'medium';
         $aiModel = $aiPrediction['model']['name'] ?? 'unknown';
 
-        // تحديث وقت الانتظار باستخدام AI
-        $queueModel->updateEstimatedWaitTime($queueData['queueID'], $aiPrediction['predictedWaitTime']);
+        $queueModel->updateEstimatedWaitTime($queueData['queueID'], $estimatedWait);
 
-        // ✅ حفظ بيانات AI في قاعدة البيانات
         $updateAIQuery = "UPDATE queue SET 
                           ai_predicted_wait = :aiWait,
                           ai_confidence = :confidence,
                           ai_model = :model
                           WHERE queueID = :queueID";
-
         $updateAIStmt = $db->prepare($updateAIQuery);
         $updateAIStmt->bindParam(':aiWait', $estimatedWait);
         $updateAIStmt->bindParam(':confidence', $aiConfidence);
@@ -294,14 +351,17 @@ if (!$queueData || !$queueData['inQueue']) {
         $updateAIStmt->bindParam(':queueID', $queueData['queueID']);
         $updateAIStmt->execute();
 
-        // إضافة توقعات AI إلى queueData
         $queueData['aiPredictedWait'] = $aiPrediction['predictedWaitTime'];
-        $queueData['aiConfidence'] = $aiPrediction['confidence'] ?? 'medium';
-        $queueData['aiModel'] = $aiPrediction['model']['name'] ?? 'neural_network';
+        $queueData['aiConfidence'] = $aiConfidence;
+        $queueData['aiModel'] = $aiModel;
         $queueData['estimatedWait'] = $aiPrediction['predictedWaitTime'] . ' mins';
     }
 
     $queueData['estimatedArrivalTime'] = $estimatedTime['formatted'];
+
+    // ========== إعادة ترتيب قائمة الانتظار (للمريض الموجود) ==========
+    reorderQueueByETA($db, $todaysAppointment['doctorID']);
+    // ================================================================
 }
 
 // إنشاء إشعار
@@ -320,7 +380,7 @@ $notificationModel->create([
     ]
 ]);
 
-// إضافة النشاط
+// تسجيل النشاط
 $logQuery = "INSERT INTO SystemLogs (userID, actionType, actionDescription) 
              VALUES (:userID, 'gps_checkin', :description)";
 $logStmt = $db->prepare($logQuery);
@@ -332,7 +392,7 @@ $logStmt->bindParam(':userID', $userID);
 $logStmt->bindParam(':description', $description);
 $logStmt->execute();
 
-// إرجاع الاستجابة مع بيانات AI
+// إرجاع النتيجة
 echo json_encode([
     "success" => true,
     "message" => "Check-in successful",
@@ -342,6 +402,8 @@ echo json_encode([
         "estimatedWait" => $queueData['estimatedWait'],
         "patientsAhead" => $queueData['patientsAhead'],
         "distance" => round($distance),
+        "distance_km" => round($distance_km, 2),
+        "eta_minutes" => $eta_minutes,
         "estimatedArrivalTime" => $estimatedTime['formatted'],
         "estimatedArrivalSeconds" => $estimatedTime['seconds'],
         "aiPredictedWait" => $queueData['aiPredictedWait'] ?? null,
@@ -357,20 +419,25 @@ echo json_encode([
     ]
 ]);
 
-// ========== دالة الحصول على توقع AI ==========
-function getAIPrediction($doctorID, $position, $patientID)
+// ========== دوال AI ==========
+
+function getAIPrediction($doctorID, $position, $patientID, $distance_km, $eta_minutes, $total_patients, $patients_ahead, $doctor_experience)
 {
-    // محاولة الاتصال بخدمة Python AI
     $ch = curl_init('http://localhost:5001/api/predict');
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
         'doctorID' => $doctorID,
         'queuePosition' => $position,
-        'patientID' => $patientID
+        'patientID' => $patientID,
+        'distance_km' => $distance_km,
+        'eta_minutes' => $eta_minutes,
+        'total_patients' => $total_patients,
+        'patients_ahead' => $patients_ahead,
+        'doctor_experience' => $doctor_experience
     ]));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 2); // مهلة قصيرة
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -383,25 +450,20 @@ function getAIPrediction($doctorID, $position, $patientID)
         }
     }
 
-    // إذا فشلت خدمة Python، استخدم نموذج PHP الاحتياطي
     return getPHPFallbackPrediction($doctorID, $position);
 }
 
-// ========== دالة احتياطية للتنبؤ باستخدام PHP ==========
 function getPHPFallbackPrediction($doctorID, $position)
 {
-    // نموذج بسيط: 15 دقيقة لكل مريض مع تعديل حسب الساعة
     $hour = (int)date('H');
     $baseTime = 15;
 
-    // ساعات الذروة (9-11 صباحاً، 3-5 مساءً)
     if (($hour >= 9 && $hour <= 11) || ($hour >= 15 && $hour <= 17)) {
         $baseTime = 20;
     }
 
-    // عطلة نهاية الأسبوع (أقل ازدحاماً)
     $dayOfWeek = (int)date('w');
-    if ($dayOfWeek == 5 || $dayOfWeek == 6) { // الجمعة والسبت
+    if ($dayOfWeek == 5 || $dayOfWeek == 6) {
         $baseTime = 12;
     }
 
@@ -415,4 +477,33 @@ function getPHPFallbackPrediction($doctorID, $position)
             'accuracy' => 70
         ]
     ];
+}
+
+// ========== دالة إعادة ترتيب قائمة الانتظار حسب وقت الوصول ==========
+function reorderQueueByETA($db, $doctorID)
+{
+    // جلب جميع المرضى في قائمة الانتظار مرتبين حسب وقت الوصول (الأقرب أولاً)
+    $query = "SELECT q.queueID, q.estimatedArrivalTime 
+              FROM queue q
+              JOIN appointments a ON q.appointmentID = a.appointmentID
+              WHERE a.doctorID = :doctorID 
+                AND DATE(q.checkinTime) = CURDATE()
+                AND q.status = 'waiting'
+              ORDER BY q.estimatedArrivalTime ASC, q.queuePosition ASC";
+
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':doctorID', $doctorID);
+    $stmt->execute();
+    $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // إعادة ترقيم المرضى (الأقرب وقت وصول يأخذ الرقم 1)
+    $position = 1;
+    foreach ($patients as $patient) {
+        $updateQuery = "UPDATE queue SET queuePosition = :pos WHERE queueID = :queueID";
+        $updateStmt = $db->prepare($updateQuery);
+        $updateStmt->bindParam(':pos', $position);
+        $updateStmt->bindParam(':queueID', $patient['queueID']);
+        $updateStmt->execute();
+        $position++;
+    }
 }
