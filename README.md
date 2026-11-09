@@ -2,7 +2,8 @@
 
 A web-based system that streamlines patient flow using GPS-based check-in and AI-powered wait time predictions.
 
-✨ Features
+
+# Features
 GPS Check-in - Patients check in automatically when they arrive at the clinic
 
 AI Wait Time Prediction - Machine learning model estimates waiting times
@@ -41,7 +42,7 @@ cd ai_python
 pip install -r requirements.txt
 python app.py
 
-- Structure
+# Structure
 
 frontend/       → React.js app
 
