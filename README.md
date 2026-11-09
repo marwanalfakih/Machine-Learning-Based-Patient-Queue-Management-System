@@ -17,10 +17,15 @@ Appointment Management - Book, reschedule, and cancel appointments
 # Tech Stack
 
 Frontend:  	React.js
+
 Backend:	  PHP (REST API)
+
 Database:	  MySQL
+
 AI Service:	Python (TabPFN)
+
 GPS:      	HTML5 Geolocation API
+
 
 # Quick Start
 
