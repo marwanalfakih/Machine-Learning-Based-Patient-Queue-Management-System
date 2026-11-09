@@ -13,7 +13,7 @@ Real-time Queue - Live queue position updates
 
 Appointment Management - Book, reschedule, and cancel appointments
 
-🛠️ Tech Stack
+# Tech Stack
 
 Frontend:  	React.js
 Backend:	  PHP (REST API)
@@ -21,37 +21,40 @@ Database:	  MySQL
 AI Service:	Python (TabPFN)
 GPS:      	HTML5 Geolocation API
 
-🚀 Quick Start
+# Quick Start
 
-# Clone the repo
+- Clone the repo
 git clone https://github.com/marwanalfakih/healthcare-queue-management.git
 cd healthcare-queue-management
 
-# Backend
+- Backend
 cd backend
 php -S localhost:8000
 
-# Frontend
+- Frontend
 cd frontend
 npm install
 npm start
 
-# AI Service
+- AI Service
 cd ai_python
 pip install -r requirements.txt
 python app.py
 
-📁 Structure
-text
+- Structure
+
 frontend/       → React.js app
+
 backend/        → PHP API
+
 ai_python/      → Python AI service
+
 database/       → MySQL schema
 
-📄 License
+# License
 MIT License
 
-👨‍💻 Developer
+# Developer
 Marwan Alfakih
 
 GitHub: @marwanalfakih
