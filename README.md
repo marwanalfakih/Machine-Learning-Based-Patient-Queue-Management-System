@@ -31,21 +31,22 @@ GPS:      	HTML5 Geolocation API
 
 - Clone the repo
 git clone https://github.com/marwanalfakih/Machine-Learning-Based-Patient-Queue-Management-System.git
+
 cd healthcare-queue-management
 
 - Backend
-cd backend
-php -S localhost:8000
+    1- cd backend
+    2- php -S localhost:8000
 
 - Frontend
-cd frontend
-npm install
-npm start
+    1- cd frontend
+    2- npm install
+    3- npm start
 
 - AI Service
-cd ai_python
-pip install -r requirements.txt
-python app.py
+    1- cd ai_python
+    2- pip install -r requirements.txt
+    3- python app.py
 
 # Structure
 
