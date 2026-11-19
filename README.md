@@ -30,7 +30,7 @@ GPS:      	HTML5 Geolocation API
 # Quick Start
 
 - Clone the repo
-git clone https://github.com/marwanalfakih/healthcare-queue-management.git
+git clone https://github.com/marwanalfakih/Machine-Learning-Based-Patient-Queue-Management-System.git
 cd healthcare-queue-management
 
 - Backend
