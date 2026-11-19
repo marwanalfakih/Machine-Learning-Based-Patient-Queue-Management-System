@@ -28,10 +28,11 @@ require_once '../../models/AIPrediction.php';
 // إحداثيات المستشفى
 define('HOSPITAL_LAT', 21.24545);
 define('HOSPITAL_LNG', 40.41980);
-define('MIN_ACCURACY', 2000);
+define('MIN_ACCURACY', 10000);
 
 $database = new Database();
 $db = $database->getConnection();
+
 
 // التحقق من التوكن
 $headers = getallheaders();
@@ -79,23 +80,14 @@ if (!isset($input['latitude']) || !isset($input['longitude']) || !isset($input['
 }
 
 
-//$latitude = floatval($input['latitude']);
-//$longitude = floatval($input['longitude']);
-//$latitude = 21.25561;
-//$longitude = 40.42975;
-
-//$latitude = 21.262959;
-//$longitude = 40.420473;
-
-$latitude = 21.250802;
-$longitude = 40.420969;
-
+$latitude = floatval($input['latitude']);
+$longitude = floatval($input['longitude']);
 
 $accuracy = floatval($input['accuracy']);
 $travelMode = $input['travelMode'] ?? 'driving';
 
 // حساب المسافة
-function calculateDistance($lat1, $lon1, $lat2, $lon2)
+function calculateDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
 {
     $earthRadius = 6371000;
     $latFrom = deg2rad($lat1);
@@ -109,7 +101,7 @@ function calculateDistance($lat1, $lon1, $lat2, $lon2)
     return $angle * $earthRadius;
 }
 
-function calculateEstimatedTime($distance, $mode)
+function calculateEstimatedTime(float $distance, string $mode): array
 {
     $speeds = [
         'walking' => 1.4,
@@ -126,7 +118,7 @@ function calculateEstimatedTime($distance, $mode)
     ];
 }
 
-function formatTime($seconds)
+function formatTime(float $seconds): string
 {
     if ($seconds < 60) {
         return floor($seconds) . ' sec';
@@ -178,6 +170,7 @@ foreach ($appointments as $app) {
 }
 
 if (!$todaysAppointment) {
+
     echo json_encode([
         "success" => false,
         "error" => "No appointment today",
@@ -194,6 +187,63 @@ if (!$todaysAppointment) {
     ]);
     exit;
 }
+
+//-------------------------------------
+
+// =============================================
+// TIME VALIDATION: Check-in only allowed within 1 hour before appointment
+// =============================================
+
+$appointment_time = new DateTime($todaysAppointment['appointmentDate']);
+$current_time = new DateTime();
+
+// Check-in window starts 1 hour before appointment
+$checkin_window_start = clone $appointment_time;
+$checkin_window_start->modify('-1 hour');
+//$checkin_window_start->modify('-30 minutes');
+
+// Case 1: Too early (more than 1 hour before appointment)
+if ($current_time < $checkin_window_start) {
+    // Calculate remaining time until check-in window opens
+    $remaining_seconds = $checkin_window_start->getTimestamp() - $current_time->getTimestamp();
+    $remaining_minutes = ceil($remaining_seconds / 60);
+
+
+    echo json_encode([
+        "success" => false,
+        //"error" => "checkin_too_early",
+        "error" => "checkin_too_early" . $current_time->format('h:i A'),
+        "message" => "You cannot check in yet",
+        "details" => [
+            "appointment_time" => $appointment_time->format('h:i A'),
+            "checkin_allowed_from" => $checkin_window_start->format('h:i A'),
+            "current_time" => $current_time->format('h:i A'),
+            "remaining_minutes" => $remaining_minutes,
+            "suggestion" => "Please try again after {$remaining_minutes}"
+        ]
+    ]);
+    exit;
+}
+
+// Case 2: Late arrival (after appointment time)
+if ($current_time > $appointment_time) {
+    echo json_encode([
+        "success" => false,
+        "error" => "appointment_passed",
+        "message" => "You have missed your appointment",
+        "details" => [
+            "appointment_time" => $appointment_time->format('h:i A'),
+            "current_time" => $current_time->format('h:i A'),
+            "suggestion" => "Please go to reception to reschedule your appointment"
+        ]
+    ]);
+    exit;
+}
+
+
+
+//----------------------------------
+
 
 // Add to GPS Check-ins table
 $checkinID = 'CHK_' . str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -421,7 +471,7 @@ echo json_encode([
 
 // ========== دوال AI ==========
 
-function getAIPrediction($doctorID, $position, $patientID, $distance_km, $eta_minutes, $total_patients, $patients_ahead, $doctor_experience)
+function getAIPrediction(int $doctorID, $position, $patientID, $distance_km, $eta_minutes, $total_patients, $patients_ahead, $doctor_experience)
 {
     $ch = curl_init('http://localhost:5001/api/predict');
     curl_setopt($ch, CURLOPT_POST, 1);
