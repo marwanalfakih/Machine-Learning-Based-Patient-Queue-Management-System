@@ -35,17 +35,25 @@ git clone https://github.com/marwanalfakih/Machine-Learning-Based-Patient-Queue-
 cd healthcare-queue-management
 
 - Backend
+  
     1- cd backend
+  
     2- php -S localhost:8000
 
 - Frontend
+  
     1- cd frontend
+  
     2- npm install
+  
     3- npm start
 
 - AI Service
+  
     1- cd ai_python
+  
     2- pip install -r requirements.txt
+  
     3- python app.py
 
 # Structure
